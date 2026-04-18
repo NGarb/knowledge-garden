@@ -5,11 +5,13 @@
 Run these SQL commands in your Supabase SQL editor before using the app.
 
 ### 1. Enable pgvector
+
 ```sql
 create extension if not exists vector;
 ```
 
 ### 2. Create entries table
+
 ```sql
 create table entries (
   id uuid primary key default gen_random_uuid(),
@@ -23,6 +25,7 @@ create table entries (
 ```
 
 ### 3. Create questions table
+
 ```sql
 create table questions (
   id uuid primary key default gen_random_uuid(),
@@ -36,6 +39,7 @@ create table questions (
 ```
 
 ### 4. Create match_entries function
+
 ```sql
 create or replace function match_entries(
   query_embedding vector(1536),
@@ -63,6 +67,7 @@ $$;
 ```
 
 ### 5. Create match_questions function
+
 ```sql
 create or replace function match_questions(
   query_embedding vector(1536),
@@ -89,6 +94,7 @@ $$;
 ```
 
 ### 6. Enable Row Level Security
+
 ```sql
 alter table entries enable row level security;
 alter table questions enable row level security;
@@ -102,7 +108,8 @@ create policy "allow all" on questions for all using (true);
 ## Environment Variables
 
 Create a `.env.local` file:
-```
+
+```env
 VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_ANON_KEY=your-anon-key
 OPENAI_API_KEY=sk-...
@@ -113,7 +120,8 @@ For Vercel: add `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, and `OPENAI_API_K
 ---
 
 ## Running locally
-```
+
+```bash
 npm install
 npm run dev
 ```
