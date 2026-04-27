@@ -10,7 +10,7 @@ const CATEGORY_COLORS = {
   Question:   '#2a6a6a'
 }
 
-export default function Capture({ openQuestions, onSaved }) {
+export default function Capture({ openQuestions, onSaved, respondingTo }) {
   const [type, setType] = useState('fact')
   const [content, setContent] = useState('')
   const [stage, setStage] = useState('writing') // writing | classifying | classified | saving | saved
@@ -41,12 +41,12 @@ export default function Capture({ openQuestions, onSaved }) {
       const [{ data: related }, { data: matched }] = await Promise.all([
         supabase.rpc('match_entries', {
           query_embedding: data.embedding,
-          match_threshold: 0.75,
+          match_threshold: 0.65,
           match_count: 4
         }),
         supabase.rpc('match_questions', {
           query_embedding: data.embedding,
-          match_threshold: 0.72,
+          match_threshold: 0.62,
           match_count: 5
         })
       ])
@@ -102,14 +102,17 @@ export default function Capture({ openQuestions, onSaved }) {
 
       if (qError) throw qError
 
-      if (questionsToClose.size > 0) {
+      const closedIds = new Set(questionsToClose)
+      if (respondingTo) closedIds.add(respondingTo.id)
+
+      if (closedIds.size > 0) {
         await supabase
           .from('questions')
           .update({ closed_at: new Date().toISOString(), closed_by_entry_id: entryId })
-          .in('id', [...questionsToClose])
+          .in('id', [...closedIds])
       }
 
-      onSaved(entry, question, questionsToClose)
+      onSaved(entry, question, closedIds)
       setStage('saved')
     } catch (e) {
       setError(e.message)
@@ -157,6 +160,12 @@ export default function Capture({ openQuestions, onSaved }) {
 
   return (
     <div className="capture">
+      {respondingTo && (
+        <div className="responding-to">
+          <span className="responding-label">responding to</span>
+          <p className="responding-question">{respondingTo.text}</p>
+        </div>
+      )}
       <div className="type-toggle">
         <button className={type === 'fact' ? 'tog active' : 'tog'} onClick={() => setType('fact')}>fact</button>
         <button className={type === 'thought' ? 'tog active' : 'tog'} onClick={() => setType('thought')}>thought</button>

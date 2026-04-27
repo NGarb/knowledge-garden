@@ -478,6 +478,102 @@ main {
 
 .close-btn:hover { color: var(--red); }
 
+.question-btns {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.respond-btn {
+  font-size: 12px;
+  font-family: var(--mono);
+  color: var(--accent);
+}
+
+.respond-btn:hover { text-decoration: underline; }
+
+/* RESPONDING TO CONTEXT */
+.responding-to {
+  padding: 14px 16px;
+  background: var(--accent-light);
+  border-left: 2px solid var(--accent);
+  border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.responding-label {
+  font-size: 10px;
+  font-family: var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--accent);
+}
+
+.responding-question {
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--text);
+}
+
+/* ENTRY EDIT */
+.garden-entry.editing {
+  border-color: var(--accent);
+}
+
+.entry-edit-input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+  font-family: var(--font);
+  font-size: 15px;
+  line-height: 1.7;
+  background: white;
+  color: var(--text);
+  resize: vertical;
+  outline: none;
+}
+
+.entry-edit-input:focus { border-color: var(--accent); }
+
+.edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  align-items: center;
+}
+
+.cancel-edit-btn {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.cancel-edit-btn:hover { color: var(--text); }
+
+.save-edit-btn {
+  padding: 7px 18px;
+  background: var(--text);
+  color: white;
+  border-radius: var(--radius);
+  font-size: 13px;
+  transition: opacity 0.15s;
+}
+
+.save-edit-btn:hover:not(:disabled) { opacity: 0.85; }
+
+.edit-btn {
+  font-size: 11px;
+  font-family: var(--mono);
+  color: var(--text-muted);
+  margin-left: auto;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.garden-entry:hover .edit-btn { opacity: 1; }
+
 .empty {
   font-size: 14px;
   color: var(--text-muted);

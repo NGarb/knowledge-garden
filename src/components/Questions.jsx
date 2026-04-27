@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { supabase } from '../supabase'
 
-export default function Questions({ questions, entries, onClose }) {
+export default function Questions({ questions, entries, onClose, onRespond }) {
   const [closing, setClosing] = useState(null)
 
   async function handleClose(id) {
@@ -31,13 +31,16 @@ export default function Questions({ questions, entries, onClose }) {
             <p className="question-origin">{getEntrySnippet(q.entry_id)}</p>
             <div className="question-actions">
               <span className="question-date">{new Date(q.created_at).toLocaleDateString()}</span>
-              <button
-                className="close-btn"
-                onClick={() => handleClose(q.id)}
-                disabled={closing === q.id}
-              >
-                {closing === q.id ? 'closing…' : 'close'}
-              </button>
+              <div className="question-btns">
+                <button className="respond-btn" onClick={() => onRespond(q)}>respond →</button>
+                <button
+                  className="close-btn"
+                  onClick={() => handleClose(q.id)}
+                  disabled={closing === q.id}
+                >
+                  {closing === q.id ? 'closing…' : 'close'}
+                </button>
+              </div>
             </div>
           </div>
         ))}
