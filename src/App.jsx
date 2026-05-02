@@ -3,6 +3,7 @@ import { supabase } from './supabase'
 import Capture from './components/Capture'
 import Garden from './components/Garden'
 import Questions from './components/Questions'
+import Ideas from './components/Ideas'
 
 export default function App() {
   const [view, setView] = useState('capture')
@@ -55,6 +56,7 @@ export default function App() {
           <button className={view === 'questions' ? 'active' : ''} onClick={() => setView('questions')}>
             carrying {openQuestions.length > 0 && <span className="q-count">{openQuestions.length}</span>}
           </button>
+          <button className={view === 'ideas' ? 'active' : ''} onClick={() => setView('ideas')}>ideas</button>
         </div>
       </nav>
       <main>
@@ -65,6 +67,7 @@ export default function App() {
         {view === 'questions' && (
           <Questions questions={openQuestions} entries={entries} onClose={handleQuestionClosed} onRespond={handleRespond} />
         )}
+        {view === 'ideas' && <Ideas />}
       </main>
     </div>
   )
