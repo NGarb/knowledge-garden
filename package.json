@@ -8,7 +8,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.39.0",
+    "@neondatabase/serverless": "^0.9.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "vite": "^5.2.0",

@@ -1,15 +1,15 @@
 import { useState } from 'react'
-import { supabase } from '../supabase'
 
 export default function Questions({ questions, entries, onClose, onRespond }) {
   const [closing, setClosing] = useState(null)
 
   async function handleClose(id) {
     setClosing(id)
-    await supabase
-      .from('questions')
-      .update({ closed_at: new Date().toISOString() })
-      .eq('id', id)
+    await fetch('/api/questions-close', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: [id] })
+    })
     onClose(id)
     setClosing(null)
   }
