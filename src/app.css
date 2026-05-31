@@ -372,6 +372,16 @@ main {
   gap: 10px;
 }
 
+.garden-entry--settled {
+  border-left: 3px solid var(--accent);
+  background: #f7faf8;
+}
+
+.garden-entry--semi {
+  border-left: 3px solid #8b6914;
+  background: #faf8f2;
+}
+
 .entry-meta {
   display: flex;
   gap: 8px;
@@ -395,6 +405,17 @@ main {
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--accent);
+}
+
+.entry-grounded {
+  font-size: 10px;
+  font-family: var(--mono);
+  letter-spacing: 0.06em;
+  color: var(--accent);
+  background: var(--accent-light);
+  padding: 2px 7px;
+  border-radius: 3px;
+  border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
 }
 
 .entry-date {

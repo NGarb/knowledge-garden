@@ -1,13 +1,19 @@
 import { useState } from 'react'
-import { supabase } from '../supabase'
 
 const CATEGORIES = ['Insight', 'Discovery', 'Pattern', 'Connection', 'Idea', 'Question']
 
-export default function Garden({ entries, onEntryUpdated }) {
+export default function Garden({ entries, openQuestions, onEntryUpdated }) {
   const [filter, setFilter] = useState(null)
   const [editingId, setEditingId] = useState(null)
   const [editContent, setEditContent] = useState('')
   const [saving, setSaving] = useState(false)
+
+  const entriesWithOpenQ = new Set((openQuestions || []).map(q => q.entry_id))
+
+  function getGroundState(entry) {
+    if (entry.type !== 'fact') return null
+    return entriesWithOpenQ.has(entry.id) ? 'semi' : 'settled'
+  }
 
   const filtered = filter ? entries.filter(e => e.category === filter) : entries
 
@@ -34,12 +40,12 @@ export default function Garden({ entries, onEntryUpdated }) {
     })
     const { embedding } = await embedRes.json()
 
-    const { data: updated } = await supabase
-      .from('entries')
-      .update({ content: editContent.trim(), embedding })
-      .eq('id', entry.id)
-      .select()
-      .single()
+    const updateRes = await fetch('/api/entry-update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: entry.id, content: editContent.trim(), embedding })
+    })
+    const updated = await updateRes.json()
 
     if (updated) onEntryUpdated(updated)
     setSaving(false)
@@ -64,11 +70,14 @@ export default function Garden({ entries, onEntryUpdated }) {
 
       <div className="garden-entries">
         {filtered.length === 0 && <p className="empty">nothing here yet.</p>}
-        {filtered.map(e => (
-          <div key={e.id} className={`garden-entry${editingId === e.id ? ' editing' : ''}`}>
+        {filtered.map(e => {
+          const gs = getGroundState(e)
+          return (
+          <div key={e.id} className={`garden-entry${editingId === e.id ? ' editing' : ''}${gs ? ` garden-entry--${gs}` : ''}`}>
             <div className="entry-meta">
               <span className="entry-type">{e.type}</span>
               <span className="entry-category">{e.category}</span>
+              {gs === 'settled' && <span className="entry-grounded">grounded</span>}
               <span className="entry-date">{new Date(e.created_at).toLocaleDateString()}</span>
               {editingId !== e.id && (
                 <button className="edit-btn" onClick={() => startEdit(e)}>edit</button>
@@ -103,7 +112,8 @@ export default function Garden({ entries, onEntryUpdated }) {
               {(e.tags || []).map(t => <span key={t} className="tag">{t}</span>)}
             </div>
           </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )

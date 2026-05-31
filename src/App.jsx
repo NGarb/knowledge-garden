@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { supabase } from './supabase'
 import Capture from './components/Capture'
 import Garden from './components/Garden'
 import Questions from './components/Questions'
@@ -16,19 +15,20 @@ export default function App() {
   }, [])
 
   async function fetchAll() {
-    const [{ data: e }, { data: q }] = await Promise.all([
-      supabase.from('entries').select('*').order('created_at', { ascending: false }),
-      supabase.from('questions').select('*').is('closed_at', null).order('created_at', { ascending: false })
+    const [entries, questions] = await Promise.all([
+      fetch('/api/entries').then(r => r.json()),
+      fetch('/api/questions').then(r => r.json())
     ])
-    if (e) setEntries(e)
-    if (q) setOpenQuestions(q)
+    if (Array.isArray(entries)) setEntries(entries)
+    if (Array.isArray(questions)) setOpenQuestions(questions)
   }
 
   function handleEntrySaved(newEntry, newQuestion, closedIds) {
     setEntries(prev => [newEntry, ...prev])
     setOpenQuestions(prev => {
       const remaining = prev.filter(q => !closedIds.has(q.id))
-      return [newQuestion, ...remaining]
+      if (newQuestion) return [newQuestion, ...remaining]
+      return remaining
     })
     setRespondingTo(null)
   }
@@ -63,7 +63,7 @@ export default function App() {
         {view === 'capture' && (
           <Capture openQuestions={openQuestions} onSaved={handleEntrySaved} respondingTo={respondingTo} />
         )}
-        {view === 'garden' && <Garden entries={entries} onEntryUpdated={handleEntryUpdated} />}
+        {view === 'garden' && <Garden entries={entries} openQuestions={openQuestions} onEntryUpdated={handleEntryUpdated} />}
         {view === 'questions' && (
           <Questions questions={openQuestions} entries={entries} onClose={handleQuestionClosed} onRespond={handleRespond} />
         )}

@@ -1,5 +1,4 @@
 import { useState, useRef } from 'react'
-import { supabase } from '../supabase'
 
 const CATEGORY_COLORS = {
   Insight:    '#4a7c59',
@@ -38,21 +37,21 @@ export default function Capture({ openQuestions, onSaved, respondingTo }) {
 
       setClassification(data)
 
-      const [{ data: related }, { data: matched }] = await Promise.all([
-        supabase.rpc('match_entries', {
-          query_embedding: data.embedding,
-          match_threshold: 0.65,
-          match_count: 4
-        }),
-        supabase.rpc('match_questions', {
-          query_embedding: data.embedding,
-          match_threshold: 0.62,
-          match_count: 5
-        })
+      const [related, matched] = await Promise.all([
+        fetch('/api/match-entries', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ embedding: data.embedding, threshold: 0.65, count: 4 })
+        }).then(r => r.json()),
+        fetch('/api/match-questions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ embedding: data.embedding, threshold: 0.62, count: 5 })
+        }).then(r => r.json())
       ])
 
-      setRelatedEntries(related || [])
-      setConnectedQuestions(matched || [])
+      setRelatedEntries(Array.isArray(related) ? related : [])
+      setConnectedQuestions(Array.isArray(matched) ? matched : [])
       setStage('classified')
       setTimeout(() => questionRef.current?.focus(), 100)
     } catch (e) {
@@ -62,22 +61,27 @@ export default function Capture({ openQuestions, onSaved, respondingTo }) {
   }
 
   async function handleSave() {
-    if (!newQuestion.trim()) return
+    if (type === 'thought' && !newQuestion.trim()) return
     setStage('saving')
 
     try {
-      const embedRes = await fetch('/api/embed', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: newQuestion.trim() })
-      })
-      const { embedding: questionEmbedding } = await embedRes.json()
+      let questionEmbedding = null
+      if (newQuestion.trim()) {
+        const embedRes = await fetch('/api/embed', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: newQuestion.trim() })
+        })
+        const { embedding } = await embedRes.json()
+        questionEmbedding = embedding
+      }
 
       const entryId = crypto.randomUUID()
 
-      const { data: entry, error: entryError } = await supabase
-        .from('entries')
-        .insert({
+      const entryRes = await fetch('/api/entries', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           id: entryId,
           type,
           content: content.trim(),
@@ -85,31 +89,34 @@ export default function Capture({ openQuestions, onSaved, respondingTo }) {
           tags: classification.tags,
           embedding: classification.embedding
         })
-        .select()
-        .single()
+      })
+      if (!entryRes.ok) throw new Error('Failed to save entry')
+      const entry = await entryRes.json()
 
-      if (entryError) throw entryError
-
-      const { data: question, error: qError } = await supabase
-        .from('questions')
-        .insert({
-          entry_id: entryId,
-          text: newQuestion.trim(),
-          embedding: questionEmbedding
+      let question = null
+      if (newQuestion.trim()) {
+        const qRes = await fetch('/api/questions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            entry_id: entryId,
+            text: newQuestion.trim(),
+            embedding: questionEmbedding
+          })
         })
-        .select()
-        .single()
-
-      if (qError) throw qError
+        if (!qRes.ok) throw new Error('Failed to save question')
+        question = await qRes.json()
+      }
 
       const closedIds = new Set(questionsToClose)
       if (respondingTo) closedIds.add(respondingTo.id)
 
       if (closedIds.size > 0) {
-        await supabase
-          .from('questions')
-          .update({ closed_at: new Date().toISOString(), closed_by_entry_id: entryId })
-          .in('id', [...closedIds])
+        await fetch('/api/questions-close', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ids: [...closedIds], closed_by_entry_id: entryId })
+        })
       }
 
       onSaved(entry, question, closedIds)
@@ -234,12 +241,15 @@ export default function Capture({ openQuestions, onSaved, respondingTo }) {
           )}
 
           <div className="question-section">
-            <p className="question-label">your question</p>
+            <p className="question-label">
+              {type === 'fact' ? 'open a question (optional)' : 'your question'}
+            </p>
             <textarea
               ref={questionRef}
               className="question-input"
               value={newQuestion}
               onChange={e => setNewQuestion(e.target.value)}
+              placeholder={type === 'fact' ? 'leave empty to save as settled ground' : ''}
               rows={3}
             />
           </div>
@@ -251,9 +261,9 @@ export default function Capture({ openQuestions, onSaved, respondingTo }) {
             <button
               className="save-btn"
               onClick={handleSave}
-              disabled={!newQuestion.trim() || stage === 'saving'}
+              disabled={(type === 'thought' && !newQuestion.trim()) || stage === 'saving'}
             >
-              {stage === 'saving' ? 'saving…' : 'save'}
+              {stage === 'saving' ? 'saving…' : (newQuestion.trim() ? 'save + carry' : 'save')}
             </button>
           </div>
         </>
