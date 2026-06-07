@@ -13,47 +13,68 @@ export default function Capture({ openQuestions, onSaved, respondingTo }) {
   const [type, setType] = useState('fact')
   const [content, setContent] = useState('')
   const [stage, setStage] = useState('writing') // writing | classifying | classified | saving | saved
+  const [stepLabel, setStepLabel] = useState('classifying…')
   const [classification, setClassification] = useState(null)
   const [relatedEntries, setRelatedEntries] = useState([])
   const [connectedQuestions, setConnectedQuestions] = useState([])
   const [questionsToClose, setQuestionsToClose] = useState(new Set())
   const [newQuestion, setNewQuestion] = useState('')
+  const [contradictions, setContradictions] = useState([])
+  const [gap, setGap] = useState(null)
+  const [suggestedQuestions, setSuggestedQuestions] = useState([])
   const [error, setError] = useState(null)
   const questionRef = useRef(null)
 
   async function handleAnalyse() {
     if (!content.trim()) return
     setStage('classifying')
+    setStepLabel('classifying…')
     setError(null)
 
     try {
-      const res = await fetch('/api/classify', {
+      const res = await fetch('/api/agent-classify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content: content.trim() })
       })
-      const data = await res.json()
-      if (!res.ok) throw new Error('Classification failed')
+      if (!res.ok) throw new Error('Analysis failed')
 
-      setClassification(data)
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
 
-      const [related, matched] = await Promise.all([
-        fetch('/api/match-entries', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ embedding: data.embedding, threshold: 0.65, count: 4 })
-        }).then(r => r.json()),
-        fetch('/api/match-questions', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ embedding: data.embedding, threshold: 0.62, count: 5 })
-        }).then(r => r.json())
-      ])
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop()
 
-      setRelatedEntries(Array.isArray(related) ? related : [])
-      setConnectedQuestions(Array.isArray(matched) ? matched : [])
-      setStage('classified')
-      setTimeout(() => questionRef.current?.focus(), 100)
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue
+          const json = line.slice(6).trim()
+          if (!json) continue
+          let event
+          try { event = JSON.parse(json) } catch { continue }
+
+          if (event.type === 'step') {
+            setStepLabel(event.label)
+          } else if (event.type === 'result') {
+            const d = event.data
+            setClassification({ category: d.category, tags: d.tags, embedding: d.embedding })
+            setRelatedEntries(d.relatedEntries)
+            setConnectedQuestions(d.connectedQuestions)
+            setContradictions(d.contradictions)
+            setGap(d.gap)
+            setSuggestedQuestions(d.suggestedQuestions)
+            setQuestionsToClose(new Set(d.connectedQuestions.map(q => q.id)))
+            setStage('classified')
+            setTimeout(() => questionRef.current?.focus(), 100)
+          } else if (event.type === 'error') {
+            throw new Error(event.message)
+          }
+        }
+      }
     } catch (e) {
       setError(e.message)
       setStage('writing')
@@ -131,11 +152,15 @@ export default function Capture({ openQuestions, onSaved, respondingTo }) {
     setType('fact')
     setContent('')
     setStage('writing')
+    setStepLabel('classifying…')
     setClassification(null)
     setRelatedEntries([])
     setConnectedQuestions([])
     setQuestionsToClose(new Set())
     setNewQuestion('')
+    setContradictions([])
+    setGap(null)
+    setSuggestedQuestions([])
     setError(null)
   }
 
@@ -145,6 +170,9 @@ export default function Capture({ openQuestions, onSaved, respondingTo }) {
     setRelatedEntries([])
     setConnectedQuestions([])
     setQuestionsToClose(new Set())
+    setContradictions([])
+    setGap(null)
+    setSuggestedQuestions([])
   }
 
   function toggleClose(id) {
@@ -189,6 +217,7 @@ export default function Capture({ openQuestions, onSaved, respondingTo }) {
             disabled={stage === 'classifying'}
             autoFocus
           />
+          {stage === 'classifying' && <p className="step-status">{stepLabel}</p>}
           {error && <p className="error">{error}</p>}
           <button
             className="analyse-btn"
@@ -214,6 +243,8 @@ export default function Capture({ openQuestions, onSaved, respondingTo }) {
             </div>
           </div>
 
+          {gap && <p className="gap-statement">{gap}</p>}
+
           {relatedEntries.length > 0 && (
             <div className="related-section">
               <h3>connects to</h3>
@@ -221,6 +252,17 @@ export default function Capture({ openQuestions, onSaved, respondingTo }) {
                 <div key={e.id} className="related-entry">
                   <span className="related-type">{e.type}</span>
                   <p>{e.content}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {contradictions.length > 0 && (
+            <div className="contradictions-section">
+              <h3>may contradict</h3>
+              {contradictions.map((c, i) => (
+                <div key={i} className="contradiction-entry">
+                  <p>{c}</p>
                 </div>
               ))}
             </div>
@@ -236,6 +278,17 @@ export default function Capture({ openQuestions, onSaved, respondingTo }) {
                     {questionsToClose.has(q.id) ? '↩ keep open' : 'close this'}
                   </button>
                 </div>
+              ))}
+            </div>
+          )}
+
+          {suggestedQuestions.length > 0 && (
+            <div className="suggested-section">
+              <h3>carry forward?</h3>
+              {suggestedQuestions.map((q, i) => (
+                <button key={i} className="suggested-q-btn" onClick={() => setNewQuestion(q)}>
+                  {q}
+                </button>
               ))}
             </div>
           )}

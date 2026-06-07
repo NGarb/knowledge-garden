@@ -418,6 +418,82 @@ main {
   border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
 }
 
+/* AGENT CLASSIFY — new UI elements */
+.step-status {
+  font-size: 13px;
+  font-family: var(--mono);
+  color: var(--text-muted);
+  letter-spacing: 0.03em;
+}
+
+.gap-statement {
+  font-size: 14px;
+  font-style: italic;
+  color: var(--text-muted);
+  line-height: 1.6;
+  padding-left: 12px;
+  border-left: 2px solid var(--border);
+}
+
+.contradictions-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.contradictions-section h3 {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--red);
+  font-weight: normal;
+}
+
+.contradiction-entry {
+  padding: 12px 16px;
+  background: color-mix(in srgb, var(--red) 6%, transparent);
+  border-radius: var(--radius);
+  border-left: 2px solid color-mix(in srgb, var(--red) 40%, transparent);
+}
+
+.contradiction-entry p {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text);
+}
+
+.suggested-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.suggested-section h3 {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: normal;
+}
+
+.suggested-q-btn {
+  text-align: left;
+  padding: 10px 14px;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text);
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.suggested-q-btn:hover {
+  border-color: var(--accent);
+  background: var(--accent-light);
+  color: var(--text);
+}
+
 .entry-date {
   font-size: 11px;
   color: var(--text-muted);
