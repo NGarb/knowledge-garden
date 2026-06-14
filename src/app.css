@@ -766,3 +766,139 @@ main {
   line-height: 1.55;
   color: var(--text-muted);
 }
+
+/* DISCOVER */
+.discover {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.discover-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.discover-subtitle {
+  font-size: 14px;
+  color: var(--text-muted);
+  line-height: 1.6;
+  max-width: 420px;
+}
+
+.refresh-btn {
+  font-size: 13px;
+  font-family: var(--mono);
+  color: var(--text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+  padding: 4px 0;
+  transition: color 0.15s;
+}
+
+.refresh-btn:hover:not(:disabled) { color: var(--accent); }
+
+.discover-loading {
+  padding: 48px 0;
+  text-align: center;
+}
+
+.discover-loading-msg {
+  font-size: 14px;
+  font-family: var(--mono);
+  color: var(--text-muted);
+}
+
+.discover-empty {
+  font-size: 14px;
+  color: var(--text-muted);
+  padding: 48px 0;
+  text-align: center;
+}
+
+.discover-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.discover-card {
+  padding: 18px 20px;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: border-color 0.15s;
+}
+
+.discover-card:hover {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+}
+
+.discover-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.discover-domain {
+  font-size: 11px;
+  font-family: var(--mono);
+  color: var(--accent);
+  letter-spacing: 0.03em;
+}
+
+.discover-dot {
+  font-size: 11px;
+  color: var(--border);
+}
+
+.discover-time {
+  font-size: 11px;
+  font-family: var(--mono);
+  color: var(--text-muted);
+}
+
+.discover-relevance {
+  font-size: 11px;
+  font-family: var(--mono);
+  color: var(--text-muted);
+  background: var(--accent-light);
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+
+.discover-title {
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--text);
+  text-decoration: none;
+  display: block;
+}
+
+.discover-title:hover {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.discover-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 4px;
+}
+
+.plant-btn {
+  font-size: 13px;
+  font-family: var(--mono);
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+  padding: 4px 0;
+  transition: color 0.15s;
+}
+
+.plant-btn:hover { color: var(--accent); }

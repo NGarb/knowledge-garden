@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 
 const CATEGORY_COLORS = {
   Insight:    '#4a7c59',
@@ -9,7 +9,7 @@ const CATEGORY_COLORS = {
   Question:   '#2a6a6a'
 }
 
-export default function Capture({ openQuestions, onSaved, respondingTo }) {
+export default function Capture({ openQuestions, onSaved, respondingTo, seedContent, onSeedConsumed }) {
   const [type, setType] = useState('fact')
   const [content, setContent] = useState('')
   const [stage, setStage] = useState('writing') // writing | classifying | classified | saving | saved
@@ -24,6 +24,21 @@ export default function Capture({ openQuestions, onSaved, respondingTo }) {
   const [suggestedQuestions, setSuggestedQuestions] = useState([])
   const [error, setError] = useState(null)
   const questionRef = useRef(null)
+
+  useEffect(() => {
+    if (seedContent) {
+      setContent(seedContent)
+      setStage('writing')
+      setClassification(null)
+      setRelatedEntries([])
+      setConnectedQuestions([])
+      setQuestionsToClose(new Set())
+      setContradictions([])
+      setGap(null)
+      setSuggestedQuestions([])
+      setError(null)
+    }
+  }, [seedContent])
 
   async function handleAnalyse() {
     if (!content.trim()) return

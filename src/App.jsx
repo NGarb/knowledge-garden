@@ -3,12 +3,14 @@ import Capture from './components/Capture'
 import Garden from './components/Garden'
 import Questions from './components/Questions'
 import Ideas from './components/Ideas'
+import Discover from './components/Discover'
 
 export default function App() {
   const [view, setView] = useState('capture')
   const [entries, setEntries] = useState([])
   const [openQuestions, setOpenQuestions] = useState([])
   const [respondingTo, setRespondingTo] = useState(null)
+  const [seedContent, setSeedContent] = useState(null)
 
   useEffect(() => {
     fetchAll()
@@ -46,6 +48,12 @@ export default function App() {
     setView('capture')
   }
 
+  function handleSeed(title, url) {
+    setSeedContent(`${title}\n${url}\n\n`)
+    setRespondingTo(null)
+    setView('capture')
+  }
+
   return (
     <div className="app">
       <nav className="nav">
@@ -56,17 +64,25 @@ export default function App() {
           <button className={view === 'questions' ? 'active' : ''} onClick={() => setView('questions')}>
             carrying {openQuestions.length > 0 && <span className="q-count">{openQuestions.length}</span>}
           </button>
+          <button className={view === 'discover' ? 'active' : ''} onClick={() => setView('discover')}>discover</button>
           <button className={view === 'ideas' ? 'active' : ''} onClick={() => setView('ideas')}>ideas</button>
         </div>
       </nav>
       <main>
         {view === 'capture' && (
-          <Capture openQuestions={openQuestions} onSaved={handleEntrySaved} respondingTo={respondingTo} />
+          <Capture
+            openQuestions={openQuestions}
+            onSaved={(entry, question, closedIds) => { setSeedContent(null); handleEntrySaved(entry, question, closedIds) }}
+            respondingTo={respondingTo}
+            seedContent={seedContent}
+            onSeedConsumed={() => setSeedContent(null)}
+          />
         )}
         {view === 'garden' && <Garden entries={entries} openQuestions={openQuestions} onEntryUpdated={handleEntryUpdated} />}
         {view === 'questions' && (
           <Questions questions={openQuestions} entries={entries} onClose={handleQuestionClosed} onRespond={handleRespond} />
         )}
+        {view === 'discover' && <Discover onSeed={handleSeed} />}
         {view === 'ideas' && <Ideas />}
       </main>
     </div>
