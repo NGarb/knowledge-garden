@@ -22,7 +22,7 @@ function sse(res, payload) {
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()
 
-  const { content } = req.body
+  const { content, garden = 'ai' } = req.body
   if (!content) return res.status(400).json({ error: 'content required' })
 
   const sql = neon(process.env.DATABASE_URL)
@@ -74,7 +74,8 @@ Output ONLY a valid JSON object — no markdown fences, no explanation — with 
               SELECT id, content, category, tags, type,
                      1 - (embedding <-> ${embeddingStr}::vector) AS similarity
               FROM entries
-              WHERE 1 - (embedding <-> ${embeddingStr}::vector) > 0.6
+              WHERE garden = ${garden}
+                AND 1 - (embedding <-> ${embeddingStr}::vector) > 0.6
               ORDER BY embedding <-> ${embeddingStr}::vector
               LIMIT 5
             `
@@ -101,6 +102,7 @@ Output ONLY a valid JSON object — no markdown fences, no explanation — with 
                      1 - (embedding <-> ${embeddingStr}::vector) AS similarity
               FROM questions
               WHERE closed_at IS NULL
+                AND garden = ${garden}
                 AND 1 - (embedding <-> ${embeddingStr}::vector) > 0.55
               ORDER BY embedding <-> ${embeddingStr}::vector
               LIMIT 5

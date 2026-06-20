@@ -9,7 +9,7 @@ const CATEGORY_COLORS = {
   Question:   '#2a6a6a'
 }
 
-export default function Capture({ openQuestions, onSaved, respondingTo, seedContent, onSeedConsumed }) {
+export default function Capture({ garden, openQuestions, onSaved, respondingTo, seedContent, onSeedConsumed }) {
   const [type, setType] = useState('fact')
   const [content, setContent] = useState('')
   const [stage, setStage] = useState('writing') // writing | classifying | classified | saving | saved
@@ -50,7 +50,7 @@ export default function Capture({ openQuestions, onSaved, respondingTo, seedCont
       const res = await fetch('/api/agent-classify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: content.trim() })
+        body: JSON.stringify({ content: content.trim(), garden })
       })
       if (!res.ok) throw new Error('Analysis failed')
 
@@ -123,7 +123,8 @@ export default function Capture({ openQuestions, onSaved, respondingTo, seedCont
           content: content.trim(),
           category: classification.category,
           tags: classification.tags,
-          embedding: classification.embedding
+          embedding: classification.embedding,
+          garden
         })
       })
       if (!entryRes.ok) throw new Error('Failed to save entry')
@@ -137,7 +138,8 @@ export default function Capture({ openQuestions, onSaved, respondingTo, seedCont
           body: JSON.stringify({
             entry_id: entryId,
             text: newQuestion.trim(),
-            embedding: questionEmbedding
+            embedding: questionEmbedding,
+            garden
           })
         })
         if (!qRes.ok) throw new Error('Failed to save question')
