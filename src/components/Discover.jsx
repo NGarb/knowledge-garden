@@ -12,18 +12,18 @@ function domain(url) {
   catch { return '' }
 }
 
-export default function Discover({ onSeed }) {
+export default function Discover({ onSeed, garden }) {
   const [articles, setArticles] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { load() }, [garden])
 
   async function load() {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch('/api/discover')
+      const res = await fetch(`/api/discover?garden=${garden}`)
       const data = await res.json()
       if (data.error) throw new Error(JSON.stringify(data.error))
       setArticles(data)
@@ -34,11 +34,15 @@ export default function Discover({ onSeed }) {
     }
   }
 
+  const subtitle = garden === 'world'
+    ? 'articles from international news, ranked by how closely they connect to your garden'
+    : 'stories from hacker news and arxiv, ranked by how closely they connect to your garden'
+
   return (
     <div className="discover">
       <div className="discover-header">
         <p className="discover-subtitle">
-          stories from the web, ranked by how closely they connect to your garden
+          {subtitle}
         </p>
         <button className="refresh-btn" onClick={load} disabled={loading}>
           {loading ? 'loading…' : '↺ refresh'}
