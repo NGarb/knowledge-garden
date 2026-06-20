@@ -4,9 +4,11 @@ import Garden from './components/Garden'
 import Questions from './components/Questions'
 import Ideas from './components/Ideas'
 import Discover from './components/Discover'
+import Digest from './components/Digest'
 
 export default function App() {
   const [view, setView] = useState('capture')
+  const [garden, setGarden] = useState('ai')
   const [entries, setEntries] = useState([])
   const [openQuestions, setOpenQuestions] = useState([])
   const [respondingTo, setRespondingTo] = useState(null)
@@ -14,12 +16,12 @@ export default function App() {
 
   useEffect(() => {
     fetchAll()
-  }, [])
+  }, [garden])
 
   async function fetchAll() {
     const [entries, questions] = await Promise.all([
-      fetch('/api/entries').then(r => r.json()),
-      fetch('/api/questions').then(r => r.json())
+      fetch(`/api/entries?garden=${garden}`).then(r => r.json()),
+      fetch(`/api/questions?garden=${garden}`).then(r => r.json())
     ])
     if (Array.isArray(entries)) setEntries(entries)
     if (Array.isArray(questions)) setOpenQuestions(questions)
@@ -58,6 +60,10 @@ export default function App() {
     <div className="app">
       <nav className="nav">
         <span className="nav-title" onClick={() => { setView('capture'); setRespondingTo(null) }}>knowledge garden</span>
+        <div className="garden-switcher">
+          <button className={garden === 'ai' ? 'gs-btn active' : 'gs-btn'} onClick={() => setGarden('ai')}>ai + tech</button>
+          <button className={garden === 'world' ? 'gs-btn active' : 'gs-btn'} onClick={() => setGarden('world')}>world</button>
+        </div>
         <div className="nav-links">
           <button className={view === 'capture' ? 'active' : ''} onClick={() => { setView('capture'); setRespondingTo(null) }}>capture</button>
           <button className={view === 'garden' ? 'active' : ''} onClick={() => setView('garden')}>garden</button>
@@ -65,12 +71,14 @@ export default function App() {
             carrying {openQuestions.length > 0 && <span className="q-count">{openQuestions.length}</span>}
           </button>
           <button className={view === 'discover' ? 'active' : ''} onClick={() => setView('discover')}>discover</button>
+          <button className={view === 'digest' ? 'active' : ''} onClick={() => setView('digest')}>digest</button>
           <button className={view === 'ideas' ? 'active' : ''} onClick={() => setView('ideas')}>ideas</button>
         </div>
       </nav>
       <main>
         {view === 'capture' && (
           <Capture
+            garden={garden}
             openQuestions={openQuestions}
             onSaved={(entry, question, closedIds) => { setSeedContent(null); handleEntrySaved(entry, question, closedIds) }}
             respondingTo={respondingTo}
@@ -82,7 +90,8 @@ export default function App() {
         {view === 'questions' && (
           <Questions questions={openQuestions} entries={entries} onClose={handleQuestionClosed} onRespond={handleRespond} />
         )}
-        {view === 'discover' && <Discover onSeed={handleSeed} />}
+        {view === 'discover' && <Discover garden={garden} onSeed={handleSeed} />}
+        {view === 'digest' && <Digest garden={garden} onEntriesSaved={fetchAll} />}
         {view === 'ideas' && <Ideas />}
       </main>
     </div>

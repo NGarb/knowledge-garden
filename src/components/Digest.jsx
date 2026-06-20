@@ -1,0 +1,252 @@
+import { useState } from 'react'
+
+const CATEGORY_COLORS = {
+  Insight:    '#4a7c59',
+  Discovery:  '#5b6fa8',
+  Pattern:    '#8b6914',
+  Connection: '#7a4a8b',
+  Idea:       '#b5451b',
+  Question:   '#2a6a6a'
+}
+
+export default function Digest({ garden, onEntriesSaved }) {
+  const [mode, setMode] = useState('url') // url | paste
+  const [url, setUrl] = useState('')
+  const [pasteTitle, setPasteTitle] = useState('')
+  const [pasteText, setPasteText] = useState('')
+  const [stage, setStage] = useState('idle') // idle | loading | review | saving | done
+  const [result, setResult] = useState(null)
+  const [selected, setSelected] = useState(new Set())
+  const [savedCount, setSavedCount] = useState(0)
+  const [error, setError] = useState(null)
+
+  async function handleExtract() {
+    const isUrl = mode === 'url'
+    if (isUrl && !url.trim()) return
+    if (!isUrl && !pasteText.trim()) return
+
+    setStage('loading')
+    setError(null)
+    setResult(null)
+
+    try {
+      const body = isUrl
+        ? { url: url.trim(), garden }
+        : { text: pasteText.trim(), title: pasteTitle.trim() || 'Pasted content', garden }
+
+      const res = await fetch('/api/digest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        // If the API suggests switching to paste mode, do so automatically
+        if (data.hint === 'paste') {
+          setMode('paste')
+          if (url.trim()) setPasteTitle(url.trim())
+        }
+        throw new Error(data.error || 'Extraction failed')
+      }
+      setResult(data)
+      setSelected(new Set(data.candidates.map((_, i) => i)))
+      setStage('review')
+    } catch (e) {
+      setError(e.message)
+      setStage('idle')
+    }
+  }
+
+  function toggle(i) {
+    setSelected(prev => {
+      const next = new Set(prev)
+      next.has(i) ? next.delete(i) : next.add(i)
+      return next
+    })
+  }
+
+  function toggleAll() {
+    if (selected.size === result.candidates.length) {
+      setSelected(new Set())
+    } else {
+      setSelected(new Set(result.candidates.map((_, i) => i)))
+    }
+  }
+
+  async function handleSave() {
+    if (selected.size === 0) return
+    setStage('saving')
+
+    const toSave = [...selected].map(i => result.candidates[i])
+
+    try {
+      await Promise.all(
+        toSave.map(c =>
+          fetch('/api/entries', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              type: 'fact',
+              content: c.content,
+              category: c.category,
+              tags: c.tags,
+              embedding: c.embedding,
+              garden
+            })
+          })
+        )
+      )
+      setSavedCount(toSave.length)
+      setStage('done')
+      if (onEntriesSaved) onEntriesSaved()
+    } catch (e) {
+      setError(e.message)
+      setStage('review')
+    }
+  }
+
+  function reset() {
+    setUrl('')
+    setPasteTitle('')
+    setPasteText('')
+    setStage('idle')
+    setResult(null)
+    setSelected(new Set())
+    setError(null)
+    setSavedCount(0)
+  }
+
+  if (stage === 'done') {
+    return (
+      <div className="digest">
+        <div className="saved-state">
+          <p className="saved-msg">{savedCount} {savedCount === 1 ? 'entry' : 'entries'} planted.</p>
+          <button className="capture-another" onClick={reset}>digest another</button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="digest">
+      <div className="digest-mode-row">
+        <div className="type-toggle">
+          <button className={`tog${mode === 'url' ? ' active' : ''}`} onClick={() => { setMode('url'); setError(null) }}>url</button>
+          <button className={`tog${mode === 'paste' ? ' active' : ''}`} onClick={() => { setMode('paste'); setError(null) }}>paste</button>
+        </div>
+        <p className="digest-mode-hint">
+          {mode === 'url' ? 'youtube, articles, papers, github' : 'transcripts, show notes, tiktoks, anything'}
+        </p>
+      </div>
+
+      {mode === 'url' ? (
+        <div className="digest-url-row">
+          <input
+            className="digest-url-input"
+            type="url"
+            placeholder="paste a url…"
+            value={url}
+            onChange={e => setUrl(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && stage === 'idle' && handleExtract()}
+            disabled={stage === 'loading'}
+          />
+          <button
+            className="analyse-btn"
+            onClick={handleExtract}
+            disabled={!url.trim() || stage === 'loading' || stage === 'saving'}
+          >
+            {stage === 'loading' ? 'extracting…' : 'extract'}
+          </button>
+        </div>
+      ) : (
+        <div className="digest-paste-block">
+          <input
+            className="digest-url-input"
+            type="text"
+            placeholder="title (optional — podcast name, episode title…)"
+            value={pasteTitle}
+            onChange={e => setPasteTitle(e.target.value)}
+            disabled={stage === 'loading'}
+          />
+          <textarea
+            className="content-input"
+            placeholder="paste transcript, show notes, or any text…"
+            value={pasteText}
+            onChange={e => setPasteText(e.target.value)}
+            rows={10}
+            disabled={stage === 'loading'}
+          />
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <button
+              className="analyse-btn"
+              onClick={handleExtract}
+              disabled={!pasteText.trim() || stage === 'loading' || stage === 'saving'}
+            >
+              {stage === 'loading' ? 'extracting…' : 'extract'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {error && <p className="error">{error}</p>}
+
+      {stage === 'loading' && (
+        <div className="digest-loading">
+          <p className="step-status">fetching content and extracting knowledge…</p>
+        </div>
+      )}
+
+      {(stage === 'review' || stage === 'saving') && result && (
+        <>
+          <div className="digest-source">
+            <span className="digest-source-type">{result.type}</span>
+            <span className="digest-source-title">{result.title}</span>
+          </div>
+
+          <div className="digest-controls">
+            <p className="digest-instruction">select the entries to add to your garden</p>
+            <button className="digest-toggle-all" onClick={toggleAll}>
+              {selected.size === result.candidates.length ? 'deselect all' : 'select all'}
+            </button>
+          </div>
+
+          <div className="digest-candidates">
+            {result.candidates.map((c, i) => {
+              const color = CATEGORY_COLORS[c.category] || '#666'
+              const isSelected = selected.has(i)
+              return (
+                <div
+                  key={i}
+                  className={`digest-candidate${isSelected ? ' selected' : ''}`}
+                  onClick={() => toggle(i)}
+                >
+                  <div className="digest-check">{isSelected ? '✓' : ''}</div>
+                  <div className="digest-candidate-body">
+                    <div className="classification">
+                      <span className="category-badge" style={{ '--cat-color': color }}>{c.category}</span>
+                      <div className="tags">
+                        {(c.tags || []).map(t => <span key={t} className="tag">{t}</span>)}
+                      </div>
+                    </div>
+                    <p className="digest-candidate-content">{c.content}</p>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+          <div className="save-row">
+            <button className="back-btn" onClick={reset}>← start over</button>
+            <button
+              className="save-btn"
+              onClick={handleSave}
+              disabled={selected.size === 0 || stage === 'saving'}
+            >
+              {stage === 'saving' ? 'saving…' : `add ${selected.size} to garden`}
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
