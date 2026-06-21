@@ -1,6 +1,5 @@
-import { streamText, tool } from 'ai'
+import { streamText, tool, jsonSchema } from 'ai'
 import { openai } from '@ai-sdk/openai'
-import { z } from 'zod'
 import { neon } from '@neondatabase/serverless'
 
 export const config = { maxDuration: 60 }
@@ -33,7 +32,6 @@ export default async function handler(req, res) {
   res.setHeader('Connection', 'keep-alive')
   res.flushHeaders()
 
-  // Embed the entry content upfront — needed when the user saves
   sse(res, { type: 'step', label: 'classifying…' })
   const entryEmbedding = await embedText(content, apiKey)
 
@@ -42,7 +40,7 @@ export default async function handler(req, res) {
 
   try {
     const result = streamText({
-      model: openai('gpt-4o', { compatibility: 'strict' }),
+      model: openai('gpt-4o'),
       maxSteps: 6,
       system: `You are a knowledge classification agent for a personal knowledge garden.
 
@@ -64,8 +62,12 @@ Output ONLY a valid JSON object — no markdown fences, no explanation — with 
       tools: {
         search_entries: tool({
           description: 'Search for semantically related existing entries in the knowledge garden',
-          parameters: z.object({
-            query: z.string().describe('A focused phrase or concept to search for')
+          parameters: jsonSchema({
+            type: 'object',
+            properties: {
+              query: { type: 'string', description: 'A focused phrase or concept to search for' }
+            },
+            required: ['query']
           }),
           execute: async ({ query }) => {
             const embedding = await embedText(query, apiKey)
@@ -91,8 +93,12 @@ Output ONLY a valid JSON object — no markdown fences, no explanation — with 
         }),
         search_questions: tool({
           description: 'Search for open questions in the garden that this entry might address',
-          parameters: z.object({
-            query: z.string().describe('A phrase capturing what this entry answers or addresses')
+          parameters: jsonSchema({
+            type: 'object',
+            properties: {
+              query: { type: 'string', description: 'A phrase capturing what this entry answers or addresses' }
+            },
+            required: ['query']
           }),
           execute: async ({ query }) => {
             const embedding = await embedText(query, apiKey)
