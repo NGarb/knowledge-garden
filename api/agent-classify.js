@@ -42,7 +42,7 @@ export default async function handler(req, res) {
 
   try {
     const result = streamText({
-      model: openai('gpt-4o'),
+      model: openai('gpt-4o', { compatibility: 'strict' }),
       maxSteps: 6,
       system: `You are a knowledge classification agent for a personal knowledge garden.
 
