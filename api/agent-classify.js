@@ -1,5 +1,3 @@
-import { streamText, tool, jsonSchema } from 'ai'
-import { openai } from '@ai-sdk/openai'
 import { neon } from '@neondatabase/serverless'
 
 export const config = { maxDuration: 60 }
@@ -35,123 +33,102 @@ export default async function handler(req, res) {
   sse(res, { type: 'step', label: 'classifying…' })
   const entryEmbedding = await embedText(content, apiKey)
 
-  let relatedEntries = []
-  let connectedQuestions = []
+  // Search entries
+  sse(res, { type: 'step', label: 'searching knowledge base…' })
+  const entryEmbeddingStr = JSON.stringify(entryEmbedding)
+  const relatedEntries = await sql`
+    SELECT id, content, category, tags, type,
+           1 - (embedding <-> ${entryEmbeddingStr}::vector) AS similarity
+    FROM entries
+    WHERE garden = ${garden}
+      AND 1 - (embedding <-> ${entryEmbeddingStr}::vector) > 0.6
+    ORDER BY embedding <-> ${entryEmbeddingStr}::vector
+    LIMIT 5
+  `
+
+  // Search questions
+  sse(res, { type: 'step', label: 'searching open questions…' })
+  const connectedQuestions = await sql`
+    SELECT id, text, entry_id,
+           1 - (embedding <-> ${entryEmbeddingStr}::vector) AS similarity
+    FROM questions
+    WHERE closed_at IS NULL
+      AND garden = ${garden}
+      AND 1 - (embedding <-> ${entryEmbeddingStr}::vector) > 0.55
+    ORDER BY embedding <-> ${entryEmbeddingStr}::vector
+    LIMIT 5
+  `
+
+  // Classify with OpenAI directly
+  const contextBlock = relatedEntries.length
+    ? `Related entries:\n${relatedEntries.map(r => `- ${r.content} (similarity: ${r.similarity?.toFixed(2)})`).join('\n')}`
+    : 'No related entries found.'
+
+  const questionsBlock = connectedQuestions.length
+    ? `Open questions this might address:\n${connectedQuestions.map(q => `- ${q.text}`).join('\n')}`
+    : 'No related open questions found.'
 
   try {
-    const result = streamText({
-      model: openai('gpt-4o'),
-      maxSteps: 6,
-      system: `You are a knowledge classification agent for a personal knowledge garden.
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o',
+        messages: [
+          {
+            role: 'system',
+            content: `You are a knowledge classification agent for a personal knowledge garden.
 
-Analyse the user's new entry and follow these steps:
-1. Determine the category (one of: Insight, Discovery, Pattern, Connection, Idea, Question) and 3–6 lowercase tags
-2. Call search_entries with a focused query that captures the core concept of the entry
-3. Call search_questions with a query capturing what the entry answers or addresses
-4. Based on what you found: identify any direct contradictions with existing entries (be specific, not vague), describe the knowledge gap this fills in one sentence, and suggest 1–2 focused follow-up questions
+${contextBlock}
 
-Output ONLY a valid JSON object — no markdown fences, no explanation — with exactly this structure:
+${questionsBlock}
+
+Analyse the user's entry and output ONLY a valid JSON object — no markdown fences, no explanation — with exactly this structure:
 {
   "category": "Insight",
   "tags": ["tag-one", "tag-two"],
   "contradictions": [],
   "gap": "A single sentence or null",
   "suggestedQuestions": ["Question one?"]
-}`,
-      messages: [{ role: 'user', content }],
-      tools: {
-        search_entries: tool({
-          description: 'Search for semantically related existing entries in the knowledge garden',
-          parameters: jsonSchema({
-            type: 'object',
-            properties: {
-              query: { type: 'string', description: 'A focused phrase or concept to search for' }
-            },
-            required: ['query']
-          }),
-          execute: async ({ query }) => {
-            const embedding = await embedText(query, apiKey)
-            const embeddingStr = JSON.stringify(embedding)
-            const rows = await sql`
-              SELECT id, content, category, tags, type,
-                     1 - (embedding <-> ${embeddingStr}::vector) AS similarity
-              FROM entries
-              WHERE garden = ${garden}
-                AND 1 - (embedding <-> ${embeddingStr}::vector) > 0.6
-              ORDER BY embedding <-> ${embeddingStr}::vector
-              LIMIT 5
-            `
-            relatedEntries = rows
-            return rows.map(r => ({
-              id: r.id,
-              content: r.content,
-              category: r.category,
-              type: r.type,
-              similarity: r.similarity
-            }))
-          }
-        }),
-        search_questions: tool({
-          description: 'Search for open questions in the garden that this entry might address',
-          parameters: jsonSchema({
-            type: 'object',
-            properties: {
-              query: { type: 'string', description: 'A phrase capturing what this entry answers or addresses' }
-            },
-            required: ['query']
-          }),
-          execute: async ({ query }) => {
-            const embedding = await embedText(query, apiKey)
-            const embeddingStr = JSON.stringify(embedding)
-            const rows = await sql`
-              SELECT id, text, entry_id,
-                     1 - (embedding <-> ${embeddingStr}::vector) AS similarity
-              FROM questions
-              WHERE closed_at IS NULL
-                AND garden = ${garden}
-                AND 1 - (embedding <-> ${embeddingStr}::vector) > 0.55
-              ORDER BY embedding <-> ${embeddingStr}::vector
-              LIMIT 5
-            `
-            connectedQuestions = rows
-            return rows.map(r => ({ id: r.id, text: r.text, similarity: r.similarity }))
-          }
-        })
-      }
+}
+
+Category must be one of: Insight, Discovery, Pattern, Connection, Idea, Question
+Tags: 3-6 lowercase tags
+Contradictions: specific contradictions with the related entries above, or empty array
+Gap: one sentence describing what knowledge gap this fills, or null
+suggestedQuestions: 1-2 focused follow-up questions`
+          },
+          { role: 'user', content }
+        ],
+        temperature: 0.3
+      })
     })
 
-    let fullText = ''
+    const data = await response.json()
+    const text = data.choices?.[0]?.message?.content || '{}'
 
-    for await (const part of result.fullStream) {
-      if (part.type === 'text-delta') {
-        fullText += part.textDelta
-      } else if (part.type === 'tool-call') {
-        const label = part.toolName === 'search_entries'
-          ? 'searching knowledge base…'
-          : 'searching open questions…'
-        sse(res, { type: 'step', label })
-      } else if (part.type === 'finish') {
-        let parsed = {}
-        try {
-          const match = fullText.match(/\{[\s\S]*\}/)
-          if (match) parsed = JSON.parse(match[0])
-        } catch (_) {}
+    let parsed = {}
+    try {
+      const match = text.match(/\{[\s\S]*\}/)
+      if (match) parsed = JSON.parse(match[0])
+    } catch (_) {}
 
-        sse(res, {
-          type: 'result',
-          data: {
-            category: parsed.category || 'Insight',
-            tags: Array.isArray(parsed.tags) ? parsed.tags : [],
-            embedding: entryEmbedding,
-            contradictions: Array.isArray(parsed.contradictions) ? parsed.contradictions : [],
-            gap: parsed.gap || null,
-            suggestedQuestions: Array.isArray(parsed.suggestedQuestions) ? parsed.suggestedQuestions : [],
-            relatedEntries,
-            connectedQuestions
-          }
-        })
+    sse(res, {
+      type: 'result',
+      data: {
+        category: parsed.category || 'Insight',
+        tags: Array.isArray(parsed.tags) ? parsed.tags : [],
+        embedding: entryEmbedding,
+        contradictions: Array.isArray(parsed.contradictions) ? parsed.contradictions : [],
+        gap: parsed.gap || null,
+        suggestedQuestions: Array.isArray(parsed.suggestedQuestions) ? parsed.suggestedQuestions : [],
+        relatedEntries,
+        connectedQuestions
       }
-    }
+    })
   } catch (e) {
     sse(res, { type: 'error', message: e.message })
   }
