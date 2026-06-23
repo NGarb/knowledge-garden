@@ -12,6 +12,16 @@ async function embedText(text, apiKey) {
   return data.data[0].embedding
 }
 
+async function chat(messages, apiKey, temperature = 0) {
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({ model: 'gpt-4o', messages, temperature })
+  })
+  const data = await res.json()
+  return data.choices?.[0]?.message?.content || ''
+}
+
 function sse(res, payload) {
   res.write(`data: ${JSON.stringify(payload)}\n\n`)
 }
@@ -30,57 +40,76 @@ export default async function handler(req, res) {
   res.setHeader('Connection', 'keep-alive')
   res.flushHeaders()
 
-  sse(res, { type: 'step', label: 'classifying…' })
-  const entryEmbedding = await embedText(content, apiKey)
-
-  // Search entries
-  sse(res, { type: 'step', label: 'searching knowledge base…' })
-  const entryEmbeddingStr = JSON.stringify(entryEmbedding)
-  const relatedEntries = await sql`
-    SELECT id, content, category, tags, type,
-           1 - (embedding <-> ${entryEmbeddingStr}::vector) AS similarity
-    FROM entries
-    WHERE garden = ${garden}
-      AND 1 - (embedding <-> ${entryEmbeddingStr}::vector) > 0.6
-    ORDER BY embedding <-> ${entryEmbeddingStr}::vector
-    LIMIT 5
-  `
-
-  // Search questions
-  sse(res, { type: 'step', label: 'searching open questions…' })
-  const connectedQuestions = await sql`
-    SELECT id, text, entry_id,
-           1 - (embedding <-> ${entryEmbeddingStr}::vector) AS similarity
-    FROM questions
-    WHERE closed_at IS NULL
-      AND garden = ${garden}
-      AND 1 - (embedding <-> ${entryEmbeddingStr}::vector) > 0.55
-    ORDER BY embedding <-> ${entryEmbeddingStr}::vector
-    LIMIT 5
-  `
-
-  // Classify with OpenAI directly
-  const contextBlock = relatedEntries.length
-    ? `Related entries:\n${relatedEntries.map(r => `- ${r.content} (similarity: ${r.similarity?.toFixed(2)})`).join('\n')}`
-    : 'No related entries found.'
-
-  const questionsBlock = connectedQuestions.length
-    ? `Open questions this might address:\n${connectedQuestions.map(q => `- ${q.text}`).join('\n')}`
-    : 'No related open questions found.'
-
   try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`
+    // Step 1 — embed the entry upfront
+    sse(res, { type: 'step', label: 'classifying…' })
+    const entryEmbedding = await embedText(content, apiKey)
+
+    // Step 2 — ask LLM to generate focused search queries
+    sse(res, { type: 'step', label: 'generating search queries…' })
+    const queryJson = await chat([
+      {
+        role: 'system',
+        content: `You are a search query generator for a personal knowledge garden.
+Given a new entry, generate two focused search queries:
+1. An "entries_query" that captures the core concept for finding related knowledge
+2. A "questions_query" that captures what this entry might answer or address
+
+Respond ONLY with a valid JSON object, no markdown fences:
+{"entries_query": "...", "questions_query": "..."}`
       },
-      body: JSON.stringify({
-        model: 'gpt-4o',
-        messages: [
-          {
-            role: 'system',
-            content: `You are a knowledge classification agent for a personal knowledge garden.
+      { role: 'user', content }
+    ], apiKey)
+
+    let queries = { entries_query: content, questions_query: content }
+    try {
+      const match = queryJson.match(/\{[\s\S]*\}/)
+      if (match) queries = JSON.parse(match[0])
+    } catch (_) {}
+
+    // Step 3 — semantic search for related entries
+    sse(res, { type: 'step', label: 'searching knowledge base…' })
+    const entriesEmbedding = await embedText(queries.entries_query, apiKey)
+    const entriesEmbeddingStr = JSON.stringify(entriesEmbedding)
+    const relatedEntries = await sql`
+      SELECT id, content, category, tags, type,
+             1 - (embedding <-> ${entriesEmbeddingStr}::vector) AS similarity
+      FROM entries
+      WHERE garden = ${garden}
+        AND 1 - (embedding <-> ${entriesEmbeddingStr}::vector) > 0.6
+      ORDER BY embedding <-> ${entriesEmbeddingStr}::vector
+      LIMIT 5
+    `
+
+    // Step 4 — semantic search for related questions
+    sse(res, { type: 'step', label: 'searching open questions…' })
+    const questionsEmbedding = await embedText(queries.questions_query, apiKey)
+    const questionsEmbeddingStr = JSON.stringify(questionsEmbedding)
+    const connectedQuestions = await sql`
+      SELECT id, text, entry_id,
+             1 - (embedding <-> ${questionsEmbeddingStr}::vector) AS similarity
+      FROM questions
+      WHERE closed_at IS NULL
+        AND garden = ${garden}
+        AND 1 - (embedding <-> ${questionsEmbeddingStr}::vector) > 0.55
+      ORDER BY embedding <-> ${questionsEmbeddingStr}::vector
+      LIMIT 5
+    `
+
+    // Step 5 — classify with full context
+    sse(res, { type: 'step', label: 'analysing…' })
+    const contextBlock = relatedEntries.length
+      ? `Related entries:\n${relatedEntries.map(r => `- ${r.content} (similarity: ${r.similarity?.toFixed(2)})`).join('\n')}`
+      : 'No related entries found.'
+
+    const questionsBlock = connectedQuestions.length
+      ? `Open questions this might address:\n${connectedQuestions.map(q => `- ${q.text}`).join('\n')}`
+      : 'No related open questions found.'
+
+    const classifyText = await chat([
+      {
+        role: 'system',
+        content: `You are a knowledge classification agent for a personal knowledge garden.
 
 ${contextBlock}
 
@@ -100,19 +129,13 @@ Tags: 3-6 lowercase tags
 Contradictions: specific contradictions with the related entries above, or empty array
 Gap: one sentence describing what knowledge gap this fills, or null
 suggestedQuestions: 1-2 focused follow-up questions`
-          },
-          { role: 'user', content }
-        ],
-        temperature: 0.3
-      })
-    })
-
-    const data = await response.json()
-    const text = data.choices?.[0]?.message?.content || '{}'
+      },
+      { role: 'user', content }
+    ], apiKey)
 
     let parsed = {}
     try {
-      const match = text.match(/\{[\s\S]*\}/)
+      const match = classifyText.match(/\{[\s\S]*\}/)
       if (match) parsed = JSON.parse(match[0])
     } catch (_) {}
 
