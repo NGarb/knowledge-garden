@@ -5,6 +5,7 @@ import Questions from './components/Questions'
 import Ideas from './components/Ideas'
 import Discover from './components/Discover'
 import Digest from './components/Digest'
+import Ask from './components/Ask'
 
 export default function App() {
   const [view, setView] = useState('capture')
@@ -72,6 +73,7 @@ export default function App() {
           </button>
           <button className={view === 'discover' ? 'active' : ''} onClick={() => setView('discover')}>discover</button>
           <button className={view === 'digest' ? 'active' : ''} onClick={() => setView('digest')}>digest</button>
+          <button className={view === 'ask' ? 'active' : ''} onClick={() => setView('ask')}>ask</button>
           <button className={view === 'ideas' ? 'active' : ''} onClick={() => setView('ideas')}>ideas</button>
         </div>
       </nav>
@@ -92,6 +94,7 @@ export default function App() {
         )}
         {view === 'discover' && <Discover garden={garden} onSeed={handleSeed} />}
         {view === 'digest' && <Digest garden={garden} onEntriesSaved={fetchAll} />}
+        {view === 'ask' && <Ask garden={garden} />}
         {view === 'ideas' && <Ideas />}
       </main>
     </div>

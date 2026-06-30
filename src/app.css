@@ -1085,3 +1085,124 @@ main {
   line-height: 1.65;
   color: var(--text);
 }
+
+/* ASK */
+.ask {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.ask-form {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.ask-input {
+  flex: 1;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  font-family: var(--font);
+  font-size: 16px;
+  background: white;
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.ask-input:focus { border-color: var(--accent); }
+.ask-input::placeholder { color: var(--text-muted); }
+
+.ask-submit {
+  padding: 14px 22px;
+  background: var(--text);
+  color: white;
+  border-radius: var(--radius);
+  font-size: 14px;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  transition: opacity 0.15s;
+  flex-shrink: 0;
+}
+
+.ask-submit:hover:not(:disabled) { opacity: 0.85; }
+
+.ask-result {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.ask-answer {
+  font-size: 16px;
+  line-height: 1.75;
+  color: var(--text);
+  white-space: pre-wrap;
+}
+
+.ask-sources {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ask-sources-label {
+  font-size: 10px;
+  font-family: var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+
+.ask-source-card {
+  display: flex;
+  gap: 12px;
+  padding: 14px 16px;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.ask-source-num {
+  font-size: 11px;
+  font-family: var(--mono);
+  color: var(--text-muted);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.ask-source-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.ask-source-content {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text);
+}
+
+.ask-source-meta {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.ask-source-category {
+  font-size: 10px;
+  font-family: var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+}
+
+.ask-source-tags {
+  font-size: 11px;
+  font-family: var(--mono);
+  color: var(--text-muted);
+}
