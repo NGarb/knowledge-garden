@@ -8,6 +8,38 @@ A garden that thinks with you. You capture what you learn; the garden connects i
 
 ---
 
+## The topology premise
+
+Most tools treat knowledge as a collection. You add items, retrieve items, search items. The question they answer is: *what do you have?*
+
+This garden is built on a different premise: knowledge has shape. Not just content — structure. Neighborhoods, boundaries, holes, density, distance. The question worth answering is: *what is the form of what you know, and what does that form reveal that the items themselves don't?*
+
+That distinction is everything.
+
+**Holes are first-class objects.** In a collection, a gap is just an absence — nothing to see. In a topology, a hole has a location, a boundary, a shape. You can ask: what concepts sit at the edge of this hole? What's the minimum set of things you'd need to learn to close it? The hole becomes a research agenda, not just a missing thing.
+
+**Bridges are the most valuable nodes — and the most fragile.** A concept that connects two otherwise separate clusters is carrying enormous explanatory load in your thinking. If you update it, misremember it, or discover it was wrong, two whole areas of your thinking drift apart. Topology makes these load-bearing ideas visible so you can treat them with appropriate care.
+
+**Distance is not the same as similarity.** Two ideas can feel related (close in vector space) but be intellectually far apart (many inferential steps between them). Topology separates these. "These things feel connected" is similarity. "Here is the chain of reasoning that actually links them" is distance. The second is far more generative — it's the difference between a hunch and an argument.
+
+**The boundary of your knowledge is navigable.** The edge of what you know usually feels like a vague sense of insufficiency. In a topology, the boundary is explicit: the entries with the most connections to concepts you've referenced but never captured. The frontier stops being a feeling and becomes a set of nodes you can walk deliberately.
+
+**The topology changes over time — and that change is the record.** Not "what did I learn this month" but "how did the shape of my thinking shift?" Did a new cluster emerge? Did two separate areas merge into one? Did a central node lose its centrality because you found something more fundamental beneath it? The evolution of the shape is a more honest account of intellectual development than any journal entry.
+
+**What the graph is made of.** Nodes are entries, questions, and concepts — where concepts are the terms that appear across multiple entries but have never been captured directly. They are implicit nodes, the most structurally load-bearing kind. Edges are the relationships between them: answer edges (question closed by entry, already built), concept edges (two entries reference the same concept, the most semantically meaningful), contradiction edges (semantically adjacent but conceptually in tension), and spawn edges (entry → question → entry, lineage as structure). Similarity edges from pgvector alone don't make a real graph — they make a soup where everything connects to everything. The graph becomes meaningful when concept edges are sparse and specific.
+
+**Features this topology enables:**
+
+- *Gap detection* — after a capture session, surface the 1-2 concepts your entry references but your garden has never explained. Not a list of everything missing; the single most load-bearing absence given what you just wrote.
+- *Bridge watch* — identify the concepts currently holding the most clusters together. Surface them so you know what's structurally critical in your thinking. Alert when a new entry significantly shifts a node's centrality.
+- *Shortest path* — pick any two entries that feel unrelated. Walk the graph and return the 2-3 bridging concepts that actually connect them. The most generative thing the tool can offer: not a recommendation, a revelation.
+- *Frontier view* — a live map of the edge of your knowledge. Concepts referenced across multiple entries but never directly captured, ranked by frequency. Your next reading list, derived entirely from your own thinking.
+- *Shape history* — a periodic snapshot of what changed structurally: clusters that merged, nodes that became more central, holes that closed. Not "you added 12 entries this week" — "your thinking on urban planning and your thinking on AI governance are now connected through a concept you captured on Tuesday."
+
+This is why the phases below are worth building. The capture pipeline, the RAG layer, the agent infrastructure — these are not the destination. They are the minimum viable scaffolding for a system that can eventually answer: *what is the architecture of your understanding, and how is it changing?*
+
+---
+
 ## Phases
 
 ### Phase 0 — What we have ✓
