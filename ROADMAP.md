@@ -30,11 +30,13 @@ That distinction is everything.
 
 **Features this topology enables:**
 
-- *Gap detection* — after a capture session, surface the 1-2 concepts your entry references but your garden has never explained. Not a list of everything missing; the single most load-bearing absence given what you just wrote.
+- *Structural gap detection* — identify concepts that sit at the boundary between clusters: referenced across multiple entries, never directly captured, load-bearing but thin. Requires graph density to be meaningful. Different from the nudge (see below).
 - *Bridge watch* — identify the concepts currently holding the most clusters together. Surface them so you know what's structurally critical in your thinking. Alert when a new entry significantly shifts a node's centrality.
 - *Shortest path* — pick any two entries that feel unrelated. Walk the graph and return the 2-3 bridging concepts that actually connect them. The most generative thing the tool can offer: not a recommendation, a revelation.
 - *Frontier view* — a live map of the edge of your knowledge. Concepts referenced across multiple entries but never directly captured, ranked by frequency. Your next reading list, derived entirely from your own thinking.
 - *Shape history* — a periodic snapshot of what changed structurally: clusters that merged, nodes that became more central, holes that closed. Not "you added 12 entries this week" — "your thinking on urban planning and your thinking on AI governance are now connected through a concept you captured on Tuesday."
+
+**A separate, earlier idea: the nudge.** After you capture an entry, Claude reads it, identifies the concepts it assumes you already understand, and checks what coverage those concepts have in your garden. If a load-bearing concept is thin or absent, it surfaces one suggestion: the most useful thing to learn next given what you just wrote. This is pure RAG — no graph required. It works on day one. The nudge is forward-looking ("here's what to learn next"); structural gap detection is architectural ("here's a hole in the shape of your thinking"). Same intuition, different mechanisms, different phase.
 
 This is why the phases below are worth building. The capture pipeline, the RAG layer, the agent infrastructure — these are not the destination. They are the minimum viable scaffolding for a system that can eventually answer: *what is the architecture of your understanding, and how is it changing?*
 
@@ -124,7 +126,9 @@ This is why the phases below are worth building. The capture pipeline, the RAG l
 
 **Ideas:**
 
-- **Gap detection / next nudge** — analyze the knowledge graph for structural holes: concepts referenced but not explained, topics with shallow coverage, prerequisite concepts missing for things already known. Surface one or two "what you should learn next" suggestions after each capture session. Implementable as a meta-query over existing RAG infrastructure.
+- **The nudge** — after capture, Claude identifies the concepts your entry assumes you already understand, checks their coverage in the garden, and surfaces the single most useful thing to learn next. Pure RAG, no graph required, works early. Distinct from structural gap detection (which lives in the topology layer and requires graph density).
+
+- **Structural gap detection** — once the graph exists, identify concepts at the boundary between clusters: referenced across multiple entries, never directly captured. The hole has a location and a shape; it becomes a research agenda. See topology premise above.
 
 - **Newsletter processing** — periodic ingestion of AI newsletters (via Gmail API or email forwarding). Extract useful concepts, fetch full content if paywalled or truncated, add as draft entries for approval before hitting the database.
 
