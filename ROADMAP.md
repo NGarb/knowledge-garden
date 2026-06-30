@@ -86,6 +86,20 @@ A garden that thinks with you. You capture what you learn; the garden connects i
 
 ---
 
+### Phase 5 — Intelligent gardening
+
+**Status:** `not started`
+
+**Ideas:**
+
+- **Gap detection / next nudge** — analyze the knowledge graph for structural holes: concepts referenced but not explained, topics with shallow coverage, prerequisite concepts missing for things already known. Surface one or two "what you should learn next" suggestions after each capture session. Implementable as a meta-query over existing RAG infrastructure.
+
+- **Newsletter processing** — periodic ingestion of AI newsletters (via Gmail API or email forwarding). Extract useful concepts, fetch full content if paywalled or truncated, add as draft entries for approval before hitting the database.
+
+- **Source quality / fact-grounding** — when notes are added or queried, flag claims that lack citations, suggest better primary sources, and distinguish opinion from fact. Keep the garden extremely fact-based even when it contains personal thoughts.
+
+---
+
 ### Phase 4 — Living garden
 
 **Status:** `not started`
