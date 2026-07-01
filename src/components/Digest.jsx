@@ -81,11 +81,12 @@ export default function Digest({ garden, onEntriesSaved }) {
 
     try {
       await Promise.all(
-        toSave.map(c =>
-          fetch('/api/entries', {
+        toSave.map(async c => {
+          const r = await fetch('/api/entries', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
+              id: crypto.randomUUID(),
               type: 'fact',
               content: c.content,
               category: c.category,
@@ -94,7 +95,11 @@ export default function Digest({ garden, onEntriesSaved }) {
               garden
             })
           })
-        )
+          if (!r.ok) {
+            const body = await r.json().catch(() => ({}))
+            throw new Error(body.error || `Save failed (${r.status})`)
+          }
+        })
       )
       setSavedCount(toSave.length)
       setStage('done')

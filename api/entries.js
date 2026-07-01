@@ -14,20 +14,25 @@ export default async function handler(req, res) {
     if (!type || !content) return res.status(400).json({ error: 'Missing required fields' })
     const embeddingStr = JSON.stringify(embedding)
     const g = garden || 'ai'
-    const [row] = await sql`
-      INSERT INTO entries (id, type, content, category, tags, embedding, garden)
-      VALUES (
-        ${id ?? null}::uuid,
-        ${type},
-        ${content},
-        ${category ?? null},
-        ${tags ?? null},
-        ${embeddingStr}::vector,
-        ${g}
-      )
-      RETURNING id, type, content, category, tags, garden, created_at
-    `
-    return res.json(row)
+    try {
+      const [row] = await sql`
+        INSERT INTO entries (id, type, content, category, tags, embedding, garden)
+        VALUES (
+          ${id ?? null}::uuid,
+          ${type},
+          ${content},
+          ${category ?? null},
+          ${tags ?? null},
+          ${embeddingStr}::vector,
+          ${g}
+        )
+        RETURNING id, type, content, category, tags, garden, created_at
+      `
+      return res.json(row)
+    } catch (e) {
+      console.error('entries POST error:', e)
+      return res.status(500).json({ error: e.message })
+    }
   }
 
   res.status(405).end()
