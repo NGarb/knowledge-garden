@@ -91,6 +91,16 @@ export default function Discover({ onSeed, garden }) {
                 >
                   plant this →
                 </button>
+                {article.comments > 0 && (
+                  <a
+                    href={`https://news.ycombinator.com/item?id=${article.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hn-comments-link"
+                  >
+                    {article.comments} comments
+                  </a>
+                )}
               </div>
             </div>
           ))}

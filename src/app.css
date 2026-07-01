@@ -927,6 +927,17 @@ main {
 
 .plant-btn:hover { color: var(--accent); }
 
+.hn-comments-link {
+  font-size: 13px;
+  font-family: var(--mono);
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+  padding: 4px 0;
+  margin-left: 12px;
+  transition: color 0.15s;
+}
+.hn-comments-link:hover { color: var(--accent); }
+
 /* DIGEST */
 .digest {
   display: flex;

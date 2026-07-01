@@ -73,7 +73,7 @@ async function fetchAiArticles() {
       )
       return storiesRaw
         .filter(s => s && s.type === 'story' && s.url && s.title)
-        .map(s => ({ id: s.id, title: s.title, url: s.url, time: s.time, score: s.score || 0 }))
+        .map(s => ({ id: s.id, title: s.title, url: s.url, time: s.time, score: s.score || 0, comments: s.descendants || 0 }))
     })(),
     (async () => {
       const res = await fetch('https://arxiv.org/rss/cs.AI')
