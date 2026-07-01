@@ -166,7 +166,7 @@ export default function Digest({ garden, onEntriesSaved }) {
       setResult(data)
       if (data.leaf) {
         setEditedLeaf(data.leaf)
-      } else {
+      } else if (data.candidates) {
         setSelected(new Set(data.candidates.map((_, i) => i)))
       }
       setStage('review')
