@@ -1,4 +1,5 @@
 import { neon } from '@neondatabase/serverless'
+import { randomUUID } from 'crypto'
 
 export default async function handler(req, res) {
   const sql = neon(process.env.DATABASE_URL)
@@ -14,11 +15,12 @@ export default async function handler(req, res) {
     if (!type || !content) return res.status(400).json({ error: 'Missing required fields' })
     const embeddingStr = JSON.stringify(embedding)
     const g = garden || 'ai'
+    const entryId = id || randomUUID()
     try {
       const [row] = await sql`
         INSERT INTO entries (id, type, content, category, tags, embedding, garden)
         VALUES (
-          ${id ?? null}::uuid,
+          ${entryId}::uuid,
           ${type},
           ${content},
           ${category ?? null},
