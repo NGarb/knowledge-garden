@@ -1086,6 +1086,218 @@ main {
   color: var(--text);
 }
 
+/* LEAF — digest review */
+.leaf-review {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.leaf-citation {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.leaf-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.leaf-section-label {
+  font-size: 10px;
+  font-family: var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.leaf-editable-hint {
+  font-size: 10px;
+  font-family: var(--mono);
+  color: var(--text-muted);
+  text-transform: none;
+  letter-spacing: 0;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 1px 5px;
+}
+
+.leaf-section-body {
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--text);
+}
+
+.leaf-list {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text);
+}
+
+.leaf-benchmarks {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.leaf-benchmark-row {
+  display: flex;
+  gap: 10px;
+  font-size: 13px;
+  align-items: baseline;
+}
+
+.leaf-benchmark-dataset {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.leaf-benchmark-metric {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.leaf-benchmark-score {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.leaf-benchmark-baseline {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.leaf-section--editable {
+  background: var(--accent-light);
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+  border-radius: var(--radius);
+  padding: 14px;
+}
+
+.leaf-practical-input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text);
+  background: white;
+  resize: vertical;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.leaf-practical-input:focus {
+  border-color: var(--accent);
+}
+
+.leaf-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* LEAF — garden entry */
+.leaf-entry {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.leaf-entry-header {
+  padding: 16px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: background 0.15s;
+}
+
+.leaf-entry-header:hover {
+  background: var(--accent-light);
+}
+
+.leaf-entry-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.leaf-entry-citation {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-style: italic;
+  flex: 1;
+}
+
+.leaf-expand-toggle {
+  font-size: 16px;
+  color: var(--text-muted);
+  font-family: var(--mono);
+  flex-shrink: 0;
+}
+
+.leaf-entry-claim {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.leaf-entry-body {
+  border-top: 1px solid var(--border);
+  padding: 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.leaf-entry-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--text);
+}
+
+.leaf-entry-section-label {
+  font-size: 10px;
+  font-family: var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+}
+
+.leaf-entry-list {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.leaf-entry-section--practical {
+  background: var(--accent-light);
+  border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
+  border-radius: var(--radius);
+  padding: 12px;
+}
+
 /* ASK */
 .ask {
   display: flex;

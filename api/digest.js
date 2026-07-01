@@ -77,9 +77,9 @@ async function extractAndRespond(res, key, title, text, sourceType, garden) {
       model: 'gpt-4o',
       messages: [{
         role: 'user',
-        content: `Extract 6-10 specific, substantive knowledge entries from this content. Each must be self-contained — understandable without the source. Avoid vague meta-commentary. Write each as a clear factual statement or first-person insight.
+        content: `Extract 6-10 specific, substantive knowledge seeds from this content. Each must be self-contained — understandable without the source. Avoid vague meta-commentary. Write each as a clear factual statement or first-person insight.
 
-For each entry:
+For each seed:
 - "content": the specific insight or fact in 1-3 sentences
 - "category": one of Insight, Discovery, Pattern, Connection, Idea, Question
 - "tags": array of 3-5 lowercase tags
@@ -106,7 +106,7 @@ ${text.slice(0, 10000)}`
     return res.status(500).json({ error: 'Failed to parse extraction result' })
   }
 
-  if (candidates.length === 0) return res.status(422).json({ error: 'No entries could be extracted' })
+  if (candidates.length === 0) return res.status(422).json({ error: 'No seeds could be extracted' })
 
   const embedRes = await fetch('https://api.openai.com/v1/embeddings', {
     method: 'POST',
@@ -126,6 +126,76 @@ ${text.slice(0, 10000)}`
 
   const enriched = candidates.map((c, i) => ({ ...c, embedding: embeddings[i] }))
   return res.json({ title, type: sourceType, candidates: enriched })
+}
+
+async function extractPaperLeaf(res, key, title, text) {
+  const chatRes = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
+    body: JSON.stringify({
+      model: 'gpt-4o',
+      messages: [{
+        role: 'user',
+        content: `You are reading an academic paper. Extract a structured leaf — a single, comprehensive knowledge record of this paper.
+
+Be specific and concrete. Include numbers, percentages, and model/dataset names wherever the paper provides them. Avoid vague summaries.
+
+Return a JSON object with these exact keys:
+
+- "claim": The paper's central thesis or contribution in 1-2 sentences. What does it argue or prove?
+- "central_concepts": Array of objects, each with "term" and "definition" (1 sentence). Cover the 3-6 key concepts a reader needs to understand this paper.
+- "method": What is novel about the approach? How did they do it? 2-4 sentences.
+- "findings": Array of strings. Each is a specific empirical result — include numbers, metrics, effect sizes. 2-6 findings.
+- "benchmarks": Array of objects, each with "dataset", "metric", "score", and optionally "baseline" and "baseline_score". Leave as empty array if no benchmarks reported.
+- "limitations": Array of strings. Gaps or caveats the paper itself acknowledges. 2-4 items.
+- "implications": What does this mean for the field or adjacent fields? 2-3 sentences.
+- "practical_application": What might this mean for practitioners or clients in industry? Be concrete — name potential use cases, workflows, or tools this could improve. 2-4 sentences. (This field will be editable by the user.)
+- "open_questions": Array of strings. What does this leave unresolved or open for future work? 2-4 items.
+- "tags": Array of 4-6 lowercase tags for this paper.
+- "authors": Author names as a single string, if identifiable from the text.
+- "year": Publication year as a string, if identifiable.
+- "venue": Journal or conference name, if identifiable.
+
+Paper title: "${title}"
+
+Paper content:
+${text.slice(0, 14000)}`
+      }],
+      response_format: { type: 'json_object' }
+    })
+  })
+
+  const chatData = await chatRes.json()
+  if (!chatRes.ok) return res.status(500).json({ error: chatData })
+
+  let leaf
+  try {
+    leaf = JSON.parse(chatData.choices[0].message.content)
+  } catch {
+    return res.status(500).json({ error: 'Failed to parse paper leaf' })
+  }
+
+  // Build a prose string for embedding from all substantive fields
+  const embeddingText = [
+    leaf.claim,
+    (leaf.central_concepts || []).map(c => `${c.term}: ${c.definition}`).join(' '),
+    leaf.method,
+    (leaf.findings || []).join(' '),
+    leaf.implications,
+    leaf.practical_application,
+    (leaf.open_questions || []).join(' ')
+  ].filter(Boolean).join(' ')
+
+  const embedRes = await fetch('https://api.openai.com/v1/embeddings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
+    body: JSON.stringify({ model: 'text-embedding-3-small', input: embeddingText })
+  })
+  const embedData = await embedRes.json()
+  if (!embedRes.ok) return res.status(500).json({ error: embedData })
+
+  const embedding = embedData.data[0].embedding
+  return res.json({ title, type: 'paper', leaf: { ...leaf, embedding } })
 }
 
 const PASTE_HINT_HOSTS = ['open.spotify.com', 'podcasts.apple.com', 'overcast.fm', 'pocketcasts.com', 'castro.fm']
@@ -188,6 +258,10 @@ export default async function handler(req, res) {
       error: 'Not enough content found at this URL.',
       hint: 'paste'
     })
+  }
+
+  if (sourceType === 'paper') {
+    return await extractPaperLeaf(res, key, title, text)
   }
 
   return await extractAndRespond(res, key, title, text, sourceType, garden)

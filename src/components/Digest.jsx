@@ -9,6 +9,119 @@ const CATEGORY_COLORS = {
   Question:   '#2a6a6a'
 }
 
+const LEAF_SECTION_LABELS = {
+  claim:                'Claim',
+  central_concepts:     'Central Concepts',
+  method:               'Method',
+  findings:             'Findings',
+  benchmarks:           'Benchmarks',
+  limitations:          'Limitations',
+  implications:         'Implications',
+  practical_application:'Practical Application',
+  open_questions:       'Open Questions',
+}
+
+function LeafReview({ leaf, onLeafChange }) {
+  const citation = [leaf.authors, leaf.year, leaf.venue].filter(Boolean).join(' · ')
+
+  function updatePractical(val) {
+    onLeafChange({ ...leaf, practical_application: val })
+  }
+
+  return (
+    <div className="leaf-review">
+      {citation && <p className="leaf-citation">{citation}</p>}
+
+      <div className="leaf-section">
+        <span className="leaf-section-label">Claim</span>
+        <p className="leaf-section-body">{leaf.claim}</p>
+      </div>
+
+      {leaf.central_concepts?.length > 0 && (
+        <div className="leaf-section">
+          <span className="leaf-section-label">Central Concepts</span>
+          <ul className="leaf-list">
+            {leaf.central_concepts.map((c, i) => (
+              <li key={i}><strong>{c.term}</strong> — {c.definition}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <div className="leaf-section">
+        <span className="leaf-section-label">Method</span>
+        <p className="leaf-section-body">{leaf.method}</p>
+      </div>
+
+      {leaf.findings?.length > 0 && (
+        <div className="leaf-section">
+          <span className="leaf-section-label">Findings</span>
+          <ul className="leaf-list">
+            {leaf.findings.map((f, i) => <li key={i}>{f}</li>)}
+          </ul>
+        </div>
+      )}
+
+      {leaf.benchmarks?.length > 0 && (
+        <div className="leaf-section">
+          <span className="leaf-section-label">Benchmarks</span>
+          <div className="leaf-benchmarks">
+            {leaf.benchmarks.map((b, i) => (
+              <div key={i} className="leaf-benchmark-row">
+                <span className="leaf-benchmark-dataset">{b.dataset}</span>
+                <span className="leaf-benchmark-metric">{b.metric}</span>
+                <span className="leaf-benchmark-score">{b.score}</span>
+                {b.baseline && (
+                  <span className="leaf-benchmark-baseline">vs {b.baseline_score} ({b.baseline})</span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {leaf.limitations?.length > 0 && (
+        <div className="leaf-section">
+          <span className="leaf-section-label">Limitations</span>
+          <ul className="leaf-list">
+            {leaf.limitations.map((l, i) => <li key={i}>{l}</li>)}
+          </ul>
+        </div>
+      )}
+
+      <div className="leaf-section">
+        <span className="leaf-section-label">Implications</span>
+        <p className="leaf-section-body">{leaf.implications}</p>
+      </div>
+
+      <div className="leaf-section leaf-section--editable">
+        <span className="leaf-section-label">Practical Application <span className="leaf-editable-hint">edit this</span></span>
+        <textarea
+          className="leaf-practical-input"
+          value={leaf.practical_application || ''}
+          onChange={e => updatePractical(e.target.value)}
+          rows={4}
+        />
+      </div>
+
+      {leaf.open_questions?.length > 0 && (
+        <div className="leaf-section">
+          <span className="leaf-section-label">Open Questions</span>
+          <ul className="leaf-list">
+            {leaf.open_questions.map((q, i) => <li key={i}>{q}</li>)}
+          </ul>
+        </div>
+      )}
+
+      {leaf.tags?.length > 0 && (
+        <div className="leaf-tags">
+          {leaf.tags.map(t => <span key={t} className="tag">{t}</span>)}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function Digest({ garden, onEntriesSaved }) {
   const [mode, setMode] = useState('url') // url | paste
   const [url, setUrl] = useState('')
@@ -17,8 +130,11 @@ export default function Digest({ garden, onEntriesSaved }) {
   const [stage, setStage] = useState('idle') // idle | loading | review | saving | done
   const [result, setResult] = useState(null)
   const [selected, setSelected] = useState(new Set())
+  const [editedLeaf, setEditedLeaf] = useState(null)
   const [savedCount, setSavedCount] = useState(0)
   const [error, setError] = useState(null)
+
+  const isLeaf = result?.type === 'paper'
 
   async function handleExtract() {
     const isUrl = mode === 'url'
@@ -41,7 +157,6 @@ export default function Digest({ garden, onEntriesSaved }) {
       })
       const data = await res.json()
       if (!res.ok) {
-        // If the API suggests switching to paste mode, do so automatically
         if (data.hint === 'paste') {
           setMode('paste')
           if (url.trim()) setPasteTitle(url.trim())
@@ -49,7 +164,11 @@ export default function Digest({ garden, onEntriesSaved }) {
         throw new Error(data.error || 'Extraction failed')
       }
       setResult(data)
-      setSelected(new Set(data.candidates.map((_, i) => i)))
+      if (data.leaf) {
+        setEditedLeaf(data.leaf)
+      } else {
+        setSelected(new Set(data.candidates.map((_, i) => i)))
+      }
       setStage('review')
     } catch (e) {
       setError(e.message)
@@ -73,7 +192,37 @@ export default function Digest({ garden, onEntriesSaved }) {
     }
   }
 
-  async function handleSave() {
+  async function handleSaveLeaf() {
+    setStage('saving')
+    const { embedding, ...leafFields } = editedLeaf
+    try {
+      const r = await fetch('/api/entries', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: crypto.randomUUID(),
+          type: 'leaf',
+          content: JSON.stringify(leafFields),
+          category: null,
+          tags: editedLeaf.tags || [],
+          embedding,
+          garden
+        })
+      })
+      if (!r.ok) {
+        const body = await r.json().catch(() => ({}))
+        throw new Error(body.error || `Save failed (${r.status})`)
+      }
+      setSavedCount(1)
+      setStage('done')
+      if (onEntriesSaved) onEntriesSaved()
+    } catch (e) {
+      setError(e.message)
+      setStage('review')
+    }
+  }
+
+  async function handleSaveSeeds() {
     if (selected.size === 0) return
     setStage('saving')
 
@@ -87,7 +236,7 @@ export default function Digest({ garden, onEntriesSaved }) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               id: crypto.randomUUID(),
-              type: 'fact',
+              type: 'seed',
               content: c.content,
               category: c.category,
               tags: c.tags,
@@ -117,6 +266,7 @@ export default function Digest({ garden, onEntriesSaved }) {
     setStage('idle')
     setResult(null)
     setSelected(new Set())
+    setEditedLeaf(null)
     setError(null)
     setSavedCount(0)
   }
@@ -125,7 +275,11 @@ export default function Digest({ garden, onEntriesSaved }) {
     return (
       <div className="digest">
         <div className="saved-state">
-          <p className="saved-msg">{savedCount} {savedCount === 1 ? 'entry' : 'entries'} planted.</p>
+          <p className="saved-msg">
+            {isLeaf
+              ? 'leaf planted.'
+              : `${savedCount} ${savedCount === 1 ? 'seed' : 'seeds'} planted.`}
+          </p>
           <button className="capture-another" onClick={reset}>digest another</button>
         </div>
       </div>
@@ -208,48 +362,66 @@ export default function Digest({ garden, onEntriesSaved }) {
             <span className="digest-source-title">{result.title}</span>
           </div>
 
-          <div className="digest-controls">
-            <p className="digest-instruction">select the entries to add to your garden</p>
-            <button className="digest-toggle-all" onClick={toggleAll}>
-              {selected.size === result.candidates.length ? 'deselect all' : 'select all'}
-            </button>
-          </div>
-
-          <div className="digest-candidates">
-            {result.candidates.map((c, i) => {
-              const color = CATEGORY_COLORS[c.category] || '#666'
-              const isSelected = selected.has(i)
-              return (
-                <div
-                  key={i}
-                  className={`digest-candidate${isSelected ? ' selected' : ''}`}
-                  onClick={() => toggle(i)}
+          {isLeaf ? (
+            <>
+              <LeafReview leaf={editedLeaf} onLeafChange={setEditedLeaf} />
+              <div className="save-row">
+                <button className="back-btn" onClick={reset}>← start over</button>
+                <button
+                  className="save-btn"
+                  onClick={handleSaveLeaf}
+                  disabled={stage === 'saving'}
                 >
-                  <div className="digest-check">{isSelected ? '✓' : ''}</div>
-                  <div className="digest-candidate-body">
-                    <div className="classification">
-                      <span className="category-badge" style={{ '--cat-color': color }}>{c.category}</span>
-                      <div className="tags">
-                        {(c.tags || []).map(t => <span key={t} className="tag">{t}</span>)}
+                  {stage === 'saving' ? 'saving…' : 'plant this leaf'}
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="digest-controls">
+                <p className="digest-instruction">select the seeds to add to your garden</p>
+                <button className="digest-toggle-all" onClick={toggleAll}>
+                  {selected.size === result.candidates.length ? 'deselect all' : 'select all'}
+                </button>
+              </div>
+
+              <div className="digest-candidates">
+                {result.candidates.map((c, i) => {
+                  const color = CATEGORY_COLORS[c.category] || '#666'
+                  const isSelected = selected.has(i)
+                  return (
+                    <div
+                      key={i}
+                      className={`digest-candidate${isSelected ? ' selected' : ''}`}
+                      onClick={() => toggle(i)}
+                    >
+                      <div className="digest-check">{isSelected ? '✓' : ''}</div>
+                      <div className="digest-candidate-body">
+                        <div className="classification">
+                          <span className="category-badge" style={{ '--cat-color': color }}>{c.category}</span>
+                          <div className="tags">
+                            {(c.tags || []).map(t => <span key={t} className="tag">{t}</span>)}
+                          </div>
+                        </div>
+                        <p className="digest-candidate-content">{c.content}</p>
                       </div>
                     </div>
-                    <p className="digest-candidate-content">{c.content}</p>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
+                  )
+                })}
+              </div>
 
-          <div className="save-row">
-            <button className="back-btn" onClick={reset}>← start over</button>
-            <button
-              className="save-btn"
-              onClick={handleSave}
-              disabled={selected.size === 0 || stage === 'saving'}
-            >
-              {stage === 'saving' ? 'saving…' : `add ${selected.size} to garden`}
-            </button>
-          </div>
+              <div className="save-row">
+                <button className="back-btn" onClick={reset}>← start over</button>
+                <button
+                  className="save-btn"
+                  onClick={handleSaveSeeds}
+                  disabled={selected.size === 0 || stage === 'saving'}
+                >
+                  {stage === 'saving' ? 'saving…' : `plant ${selected.size} ${selected.size === 1 ? 'seed' : 'seeds'}`}
+                </button>
+              </div>
+            </>
+          )}
         </>
       )}
     </div>
