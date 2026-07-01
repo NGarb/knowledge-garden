@@ -73,7 +73,7 @@ async function fetchAiArticles() {
       )
       return storiesRaw
         .filter(s => s && s.type === 'story' && s.url && s.title)
-        .map(s => ({ id: s.id, title: s.title, url: s.url, time: s.time }))
+        .map(s => ({ id: s.id, title: s.title, url: s.url, time: s.time, score: s.score || 0 }))
     })(),
     (async () => {
       const res = await fetch('https://arxiv.org/rss/cs.AI')
@@ -148,10 +148,12 @@ export default async function handler(req, res) {
     .sort((a, b) => a.index - b.index)
     .map(d => d.embedding)
 
-  // 7. Rank by cosine similarity to garden centroid
-  const ranked = articles
-    .map((a, i) => ({ ...a, relevance: cosineSim(center, embeddings[i]) }))
-    .sort((a, b) => b.relevance - a.relevance)
+  // 7. Rank by blending cosine similarity with HN score (normalized)
+  const scored = articles.map((a, i) => ({ ...a, relevance: cosineSim(center, embeddings[i]) }))
+  const maxScore = Math.max(...scored.map(a => a.score || 0), 1)
+  const ranked = scored
+    .map(a => ({ ...a, _rank: 0.6 * a.relevance + 0.4 * ((a.score || 0) / maxScore) }))
+    .sort((a, b) => b._rank - a._rank)
 
   res.json(ranked.slice(0, 10))
 }
