@@ -111,46 +111,48 @@ export default async function handler(req, res) {
   const sql = neon(process.env.DATABASE_URL)
   const key = process.env.OPENAI_API_KEY
   const garden = req.query.garden || 'ai'
+  const concept = req.query.concept || null
 
-  // 1. Fetch recent entries' embeddings from DB
-  const entries = await sql`
-    SELECT embedding FROM entries
-    WHERE garden = ${garden}
-    ORDER BY created_at DESC
-    LIMIT 20
-  `
-
-  // 2. Fetch articles for this garden
-  const articles = garden === 'world'
-    ? await fetchWorldArticles()
+  // 1. Fetch articles + ranking vector in parallel
+  const articlesPromise = garden === 'world'
+    ? fetchWorldArticles()
     : garden === 'culture'
-      ? await fetchCultureArticles()
-      : await fetchAiArticles()
+      ? fetchCultureArticles()
+      : fetchAiArticles()
+
+  // When a concept is provided, embed it directly; otherwise use garden centroid
+  const centerPromise = concept
+    ? fetch('https://api.openai.com/v1/embeddings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
+        body: JSON.stringify({ model: 'text-embedding-3-small', input: [concept] })
+      })
+        .then(r => r.json())
+        .then(d => d.data?.[0]?.embedding ?? null)
+    : sql`
+        SELECT embedding FROM entries
+        WHERE garden = ${garden}
+        ORDER BY created_at DESC
+        LIMIT 20
+      `.then(entries => {
+        const vectors = entries
+          .map(e => {
+            const raw = e.embedding
+            if (Array.isArray(raw)) return raw
+            if (typeof raw === 'string') { try { return JSON.parse(raw) } catch { return null } }
+            return null
+          })
+          .filter(Boolean)
+        return vectors.length ? centroid(vectors) : null
+      })
+
+  const [articles, center] = await Promise.all([articlesPromise, centerPromise])
 
   if (articles.length === 0) return res.json([])
 
-  // 3. If no garden entries yet, return a selection without scoring
-  if (entries.length === 0) {
+  if (!center) {
     return res.json(articles.slice(0, 8).map(a => ({ ...a, relevance: null })))
   }
-
-  // 4. Compute centroid of garden embeddings
-  const vectors = entries
-    .map(e => {
-      const raw = e.embedding
-      if (Array.isArray(raw)) return raw
-      if (typeof raw === 'string') {
-        try { return JSON.parse(raw) } catch { return null }
-      }
-      return null
-    })
-    .filter(Boolean)
-
-  if (vectors.length === 0) {
-    return res.json(articles.slice(0, 8).map(a => ({ ...a, relevance: null })))
-  }
-
-  const center = centroid(vectors)
 
   // 5. Batch-embed all article titles in one API call
   const titles = articles.map(a => a.title)

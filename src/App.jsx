@@ -14,6 +14,7 @@ export default function App() {
   const [openQuestions, setOpenQuestions] = useState([])
   const [respondingTo, setRespondingTo] = useState(null)
   const [seedContent, setSeedContent] = useState(null)
+  const [discoverConcept, setDiscoverConcept] = useState(null)
 
   useEffect(() => {
     fetchAll()
@@ -72,7 +73,7 @@ export default function App() {
           <button className={view === 'questions' ? 'active' : ''} onClick={() => setView('questions')}>
             carrying {openQuestions.length > 0 && <span className="q-count">{openQuestions.length}</span>}
           </button>
-          <button className={view === 'discover' ? 'active' : ''} onClick={() => setView('discover')}>discover</button>
+          <button className={view === 'discover' ? 'active' : ''} onClick={() => { setDiscoverConcept(null); setView('discover') }}>discover</button>
           <button className={view === 'digest' ? 'active' : ''} onClick={() => setView('digest')}>digest</button>
           <button className={view === 'ask' ? 'active' : ''} onClick={() => setView('ask')}>ask</button>
           <button className={view === 'foundation' ? 'active' : ''} onClick={() => setView('foundation')}>foundation</button>
@@ -93,14 +94,14 @@ export default function App() {
         {view === 'questions' && (
           <Questions questions={openQuestions} entries={entries} onClose={handleQuestionClosed} onRespond={handleRespond} />
         )}
-        {view === 'discover' && <Discover garden={garden} onSeed={handleSeed} />}
+        {view === 'discover' && <Discover garden={garden} concept={discoverConcept} onSeed={handleSeed} />}
         {view === 'digest' && <Digest garden={garden} onEntriesSaved={fetchAll} />}
         {view === 'ask' && <Ask garden={garden} />}
         {view === 'foundation' && (
           <Foundation
             garden={garden}
             onCapture={concept => { setSeedContent(`${concept}\n\n`); setView('capture') }}
-            onDiscover={() => setView('discover')}
+            onDiscover={concept => { setDiscoverConcept(concept); setView('discover') }}
           />
         )}
       </main>

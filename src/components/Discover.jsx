@@ -12,18 +12,21 @@ function domain(url) {
   catch { return '' }
 }
 
-export default function Discover({ onSeed, garden }) {
+export default function Discover({ onSeed, garden, concept }) {
   const [articles, setArticles] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
-  useEffect(() => { load() }, [garden])
+  useEffect(() => { load() }, [garden, concept])
 
   async function load() {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch(`/api/discover?garden=${garden}`)
+      const url = concept
+        ? `/api/discover?garden=${garden}&concept=${encodeURIComponent(concept)}`
+        : `/api/discover?garden=${garden}`
+      const res = await fetch(url)
       const data = await res.json()
       if (data.error) throw new Error(JSON.stringify(data.error))
       setArticles(data)
@@ -34,11 +37,14 @@ export default function Discover({ onSeed, garden }) {
     }
   }
 
-  const subtitle = garden === 'world'
-    ? 'articles from international news, ranked by how closely they connect to your garden'
+  const baseSubtitle = garden === 'world'
+    ? 'articles from international news'
     : garden === 'culture'
-      ? 'stories on culture, society, and religion, ranked by how closely they connect to your garden'
-      : 'stories from hacker news and arxiv, ranked by how closely they connect to your garden'
+      ? 'stories on culture, society, and religion'
+      : 'stories from hacker news and arxiv'
+  const subtitle = concept
+    ? `${baseSubtitle}, curated for "${concept}"`
+    : `${baseSubtitle}, ranked by how closely they connect to your garden`
 
   return (
     <div className="discover">
