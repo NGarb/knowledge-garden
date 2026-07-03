@@ -160,7 +160,7 @@ export default function Foundation({ garden, onCapture, onDiscover }) {
               <p className="fn-node-count">{node.entry_count} entr{node.entry_count === 1 ? 'y' : 'ies'}</p>
             )}
             <div className="fn-node-actions">
-              {node.coverage === 'gap' && (
+              {node.coverage !== 'covered' && (
                 <button className="fn-action-btn fn-action-discover" onClick={() => onDiscover(node.concept)}>
                   discover →
                 </button>
