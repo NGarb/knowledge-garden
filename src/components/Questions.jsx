@@ -5,8 +5,8 @@ export default function Questions({ questions, entries, onClose, onRespond }) {
 
   async function handleClose(id) {
     setClosing(id)
-    await fetch('/api/questions-close', {
-      method: 'POST',
+    await fetch('/api/questions', {
+      method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ids: [id] })
     })

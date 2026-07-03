@@ -150,8 +150,8 @@ export default function Capture({ garden, openQuestions, onSaved, respondingTo, 
       if (respondingTo) closedIds.add(respondingTo.id)
 
       if (closedIds.size > 0) {
-        await fetch('/api/questions-close', {
-          method: 'POST',
+        await fetch('/api/questions', {
+          method: 'DELETE',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ ids: [...closedIds], closed_by_entry_id: entryId })
         })
