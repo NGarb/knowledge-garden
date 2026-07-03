@@ -64,6 +64,7 @@ export default function App() {
         <div className="garden-switcher">
           <button className={garden === 'ai' ? 'gs-btn active' : 'gs-btn'} onClick={() => setGarden('ai')}>ai + tech</button>
           <button className={garden === 'world' ? 'gs-btn active' : 'gs-btn'} onClick={() => setGarden('world')}>world</button>
+          <button className={garden === 'culture' ? 'gs-btn active' : 'gs-btn'} onClick={() => setGarden('culture')}>culture</button>
         </div>
         <div className="nav-links">
           <button className={view === 'capture' ? 'active' : ''} onClick={() => { setView('capture'); setRespondingTo(null) }}>capture</button>

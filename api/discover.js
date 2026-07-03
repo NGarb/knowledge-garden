@@ -60,6 +60,25 @@ async function fetchWorldArticles() {
   return all.filter(a => { if (seen.has(a.url)) return false; seen.add(a.url); return true })
 }
 
+async function fetchCultureArticles() {
+  const sources = [
+    'https://www.theguardian.com/culture/rss',
+    'https://rss.nytimes.com/services/xml/rss/nyt/ReligionandBelief.xml',
+    'https://rss.nytimes.com/services/xml/rss/nyt/Society.xml'
+  ]
+  const results = await Promise.allSettled(
+    sources.map(url =>
+      fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible)' } }).then(r => r.text())
+    )
+  )
+  const all = []
+  for (const r of results) {
+    if (r.status === 'fulfilled') all.push(...parseRss(r.value, 25))
+  }
+  const seen = new Set()
+  return all.filter(a => { if (seen.has(a.url)) return false; seen.add(a.url); return true })
+}
+
 async function fetchAiArticles() {
   const [hnResult, arxivResult] = await Promise.allSettled([
     (async () => {
@@ -102,7 +121,11 @@ export default async function handler(req, res) {
   `
 
   // 2. Fetch articles for this garden
-  const articles = garden === 'world' ? await fetchWorldArticles() : await fetchAiArticles()
+  const articles = garden === 'world'
+    ? await fetchWorldArticles()
+    : garden === 'culture'
+      ? await fetchCultureArticles()
+      : await fetchAiArticles()
 
   if (articles.length === 0) return res.json([])
 

@@ -36,7 +36,9 @@ export default function Discover({ onSeed, garden }) {
 
   const subtitle = garden === 'world'
     ? 'articles from international news, ranked by how closely they connect to your garden'
-    : 'stories from hacker news and arxiv, ranked by how closely they connect to your garden'
+    : garden === 'culture'
+      ? 'stories on culture, society, and religion, ranked by how closely they connect to your garden'
+      : 'stories from hacker news and arxiv, ranked by how closely they connect to your garden'
 
   return (
     <div className="discover">
