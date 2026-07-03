@@ -69,6 +69,35 @@ async function fetchArticleText(url) {
   return { title, text }
 }
 
+function buildLeafEmbeddingText(leaf) {
+  return [
+    leaf.claim,
+    (leaf.central_concepts || []).map(c => `${c.term}: ${c.definition}`).join(' '),
+    leaf.method,
+    (leaf.findings || []).join(' '),
+    (leaf.benchmarks || []).map(b => `${b.dataset || ''} ${b.metric || ''} ${b.score || ''} ${b.baseline || ''} ${b.baseline_score || ''}`).join(' '),
+    (leaf.limitations || []).join(' '),
+    leaf.implications,
+    leaf.practical_application,
+    (leaf.open_questions || []).join(' '),
+    leaf.authors,
+    leaf.year,
+    leaf.venue
+  ].filter(Boolean).join(' ')
+}
+
+async function embedLeaf(key, leaf) {
+  const embeddingText = buildLeafEmbeddingText(leaf)
+  const embedRes = await fetch('https://api.openai.com/v1/embeddings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
+    body: JSON.stringify({ model: 'text-embedding-3-small', input: embeddingText })
+  })
+  const embedData = await embedRes.json()
+  if (!embedRes.ok) return { error: embedData }
+  return { embedding: embedData.data[0].embedding }
+}
+
 async function extractAndRespond(res, key, title, text, sourceType, garden) {
   const chatRes = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -175,27 +204,65 @@ ${text.slice(0, 14000)}`
     return res.status(500).json({ error: 'Failed to parse paper leaf' })
   }
 
-  // Build a prose string for embedding from all substantive fields
-  const embeddingText = [
-    leaf.claim,
-    (leaf.central_concepts || []).map(c => `${c.term}: ${c.definition}`).join(' '),
-    leaf.method,
-    (leaf.findings || []).join(' '),
-    leaf.implications,
-    leaf.practical_application,
-    (leaf.open_questions || []).join(' ')
-  ].filter(Boolean).join(' ')
+  const embedResult = await embedLeaf(key, leaf)
+  if (embedResult.error) return res.status(500).json({ error: embedResult.error })
 
-  const embedRes = await fetch('https://api.openai.com/v1/embeddings', {
+  const { embedding } = embedResult
+  return res.json({ title, type: 'paper', leaf: { ...leaf, embedding } })
+}
+
+async function extractArticleLeaf(res, key, title, text) {
+  const chatRes = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
-    body: JSON.stringify({ model: 'text-embedding-3-small', input: embeddingText })
-  })
-  const embedData = await embedRes.json()
-  if (!embedRes.ok) return res.status(500).json({ error: embedData })
+    body: JSON.stringify({
+      model: 'gpt-4o',
+      messages: [{
+        role: 'user',
+        content: `You are reading an article. Extract a structured leaf — a single, comprehensive knowledge record from this article.
 
-  const embedding = embedData.data[0].embedding
-  return res.json({ title, type: 'paper', leaf: { ...leaf, embedding } })
+Be specific and concrete. Use explicit numbers, dates, named entities, and quoted claims when present. Do not invent details that are not in the source.
+
+Return a JSON object with these exact keys:
+
+- "claim": The article's central argument or key takeaway in 1-2 sentences.
+- "central_concepts": Array of objects, each with "term" and "definition" (1 sentence). Cover the 3-6 key concepts needed to understand the article.
+- "method": How the article supports its claims (reporting approach, evidence, interviews, documents, datasets, or analysis style). 1-3 sentences. If unclear, use an empty string.
+- "findings": Array of strings. Specific factual points or results in the article, including numbers where available. 2-6 findings.
+- "benchmarks": Array of objects, each with "dataset", "metric", "score", and optionally "baseline" and "baseline_score". Use [] if not applicable.
+- "limitations": Array of strings. Uncertainties, caveats, missing evidence, or potential bias in the article's framing. 2-4 items.
+- "implications": What this means for policy, business, technology, or society in 2-3 sentences.
+- "practical_application": Concrete ways a practitioner could use this in decisions, workflows, or strategy. 2-4 sentences. (This field will be editable by the user.)
+- "open_questions": Array of strings. What remains unresolved, ambiguous, or worth tracking next. 2-4 items.
+- "tags": Array of 4-6 lowercase tags.
+- "authors": Author names as a single string, if identifiable.
+- "year": Publication year as a string, if identifiable.
+- "venue": Publication name as a string, if identifiable.
+
+Article title: "${title}"
+
+Article content:
+${text.slice(0, 14000)}`
+      }],
+      response_format: { type: 'json_object' }
+    })
+  })
+
+  const chatData = await chatRes.json()
+  if (!chatRes.ok) return res.status(500).json({ error: chatData })
+
+  let leaf
+  try {
+    leaf = JSON.parse(chatData.choices[0].message.content)
+  } catch {
+    return res.status(500).json({ error: 'Failed to parse article leaf' })
+  }
+
+  const embedResult = await embedLeaf(key, leaf)
+  if (embedResult.error) return res.status(500).json({ error: embedResult.error })
+
+  const { embedding } = embedResult
+  return res.json({ title, type: 'article', leaf: { ...leaf, embedding } })
 }
 
 const PASTE_HINT_HOSTS = ['open.spotify.com', 'podcasts.apple.com', 'overcast.fm', 'pocketcasts.com', 'castro.fm']
@@ -262,6 +329,10 @@ export default async function handler(req, res) {
 
   if (sourceType === 'paper') {
     return await extractPaperLeaf(res, key, title, text)
+  }
+
+  if (sourceType === 'article') {
+    return await extractArticleLeaf(res, key, title, text)
   }
 
   return await extractAndRespond(res, key, title, text, sourceType, garden)

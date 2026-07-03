@@ -134,7 +134,7 @@ export default function Digest({ garden, onEntriesSaved }) {
   const [savedCount, setSavedCount] = useState(0)
   const [error, setError] = useState(null)
 
-  const isLeaf = result?.type === 'paper'
+  const isLeaf = result?.type === 'paper' || result?.type === 'article'
 
   async function handleExtract() {
     const isUrl = mode === 'url'
