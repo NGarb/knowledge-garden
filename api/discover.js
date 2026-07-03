@@ -110,70 +110,87 @@ export default async function handler(req, res) {
 
   const sql = neon(process.env.DATABASE_URL)
   const key = process.env.OPENAI_API_KEY
+  const exaKey = process.env.EXA_API_KEY
   const garden = req.query.garden || 'ai'
   const concept = req.query.concept || null
 
-  // 1. Fetch articles + ranking vector in parallel
-  const articlesPromise = garden === 'world'
-    ? fetchWorldArticles()
+  // Concept-specific: use Exa to search directly rather than reranking a fixed pool
+  if (concept) {
+    const exaRes = await fetch('https://api.exa.ai/search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': exaKey },
+      body: JSON.stringify({
+        query: concept,
+        numResults: 10,
+        type: 'neural',
+        useAutoprompt: true,
+        contents: { title: true }
+      })
+    })
+    const exaData = await exaRes.json()
+    if (!exaRes.ok) return res.status(500).json({ error: exaData })
+
+    const articles = (exaData.results || []).map(r => ({
+      id: r.id || r.url,
+      title: r.title,
+      url: r.url,
+      time: r.publishedDate ? Math.floor(new Date(r.publishedDate).getTime() / 1000) : Math.floor(Date.now() / 1000),
+      relevance: r.score ?? null,
+      score: 0,
+      comments: 0
+    }))
+    return res.json(articles)
+  }
+
+  // Garden-wide: fetch from fixed sources and rank by garden centroid
+  const articles = garden === 'world'
+    ? await fetchWorldArticles()
     : garden === 'culture'
-      ? fetchCultureArticles()
-      : fetchAiArticles()
-
-  // When a concept is provided, embed it directly; otherwise use garden centroid
-  const centerPromise = concept
-    ? fetch('https://api.openai.com/v1/embeddings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
-        body: JSON.stringify({ model: 'text-embedding-3-small', input: [concept] })
-      })
-        .then(r => r.json())
-        .then(d => d.data?.[0]?.embedding ?? null)
-    : sql`
-        SELECT embedding FROM entries
-        WHERE garden = ${garden}
-        ORDER BY created_at DESC
-        LIMIT 20
-      `.then(entries => {
-        const vectors = entries
-          .map(e => {
-            const raw = e.embedding
-            if (Array.isArray(raw)) return raw
-            if (typeof raw === 'string') { try { return JSON.parse(raw) } catch { return null } }
-            return null
-          })
-          .filter(Boolean)
-        return vectors.length ? centroid(vectors) : null
-      })
-
-  const [articles, center] = await Promise.all([articlesPromise, centerPromise])
+      ? await fetchCultureArticles()
+      : await fetchAiArticles()
 
   if (articles.length === 0) return res.json([])
 
-  if (!center) {
+  const entries = await sql`
+    SELECT embedding FROM entries
+    WHERE garden = ${garden}
+    ORDER BY created_at DESC
+    LIMIT 20
+  `
+
+  if (entries.length === 0) {
     return res.json(articles.slice(0, 8).map(a => ({ ...a, relevance: null })))
   }
 
-  // 5. Batch-embed all article titles in one API call
+  const vectors = entries
+    .map(e => {
+      const raw = e.embedding
+      if (Array.isArray(raw)) return raw
+      if (typeof raw === 'string') { try { return JSON.parse(raw) } catch { return null } }
+      return null
+    })
+    .filter(Boolean)
+
+  if (vectors.length === 0) {
+    return res.json(articles.slice(0, 8).map(a => ({ ...a, relevance: null })))
+  }
+
+  const center = centroid(vectors)
+
   const titles = articles.map(a => a.title)
   const embedRes = await fetch('https://api.openai.com/v1/embeddings', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${key}`
-    },
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
     body: JSON.stringify({ model: 'text-embedding-3-small', input: titles })
   })
   const embedData = await embedRes.json()
   if (!embedRes.ok) return res.status(500).json({ error: embedData })
 
-  // 6. Sort embeddings by index to align with articles array
   const embeddings = embedData.data
     .slice()
     .sort((a, b) => a.index - b.index)
     .map(d => d.embedding)
 
-  // 7. Rank by blending cosine similarity with HN score (normalized)
   const scored = articles.map((a, i) => ({ ...a, relevance: cosineSim(center, embeddings[i]) }))
   const maxScore = Math.max(...scored.map(a => a.score || 0), 1)
   const ranked = scored
