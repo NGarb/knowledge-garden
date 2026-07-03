@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import Capture from './components/Capture'
 import Garden from './components/Garden'
 import Questions from './components/Questions'
-import Ideas from './components/Ideas'
 import Discover from './components/Discover'
 import Digest from './components/Digest'
 import Ask from './components/Ask'
@@ -77,7 +76,6 @@ export default function App() {
           <button className={view === 'digest' ? 'active' : ''} onClick={() => setView('digest')}>digest</button>
           <button className={view === 'ask' ? 'active' : ''} onClick={() => setView('ask')}>ask</button>
           <button className={view === 'foundation' ? 'active' : ''} onClick={() => setView('foundation')}>foundation</button>
-          <button className={view === 'ideas' ? 'active' : ''} onClick={() => setView('ideas')}>ideas</button>
         </div>
       </nav>
       <main>
@@ -105,7 +103,6 @@ export default function App() {
             onDiscover={() => setView('discover')}
           />
         )}
-        {view === 'ideas' && <Ideas />}
       </main>
     </div>
   )

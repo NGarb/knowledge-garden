@@ -258,6 +258,43 @@ Alert on:
 
 ---
 
+## Feature ideas
+
+Ideas in rough order — from close to the current codebase to bigger swings.
+
+### near-term
+
+- **recommendations on capture** — after classifying an entry, surface 2 books and 2 podcasts that go deeper on the same themes — tuned to the specific content, not just the category.
+- **thread view** — surface the question lineage (closed_by_entry_id) as a readable narrative arc — showing how one question spawned an answer that opened the next. The shape of a thought over time.
+
+### mid-term
+
+- **cluster detection** — periodic clustering over all entry embeddings to find emergent topic areas. Not user-defined — mathematically emergent. GPT names each cluster and describes what's alive in it.
+- **central node surfacing** — identify bridging concepts that sit between clusters — the ideas that connect your thinking across different areas. Surface them when a new entry significantly raises one's centrality.
+- **contradiction detection** — flag entries that are semantically adjacent but conceptually in tension — things you believed that a new entry quietly undermines. Surfaces the places where your thinking is shifting.
+- **essay readiness** — when a cluster reaches a readiness threshold — sufficient mass, spread across entry types, at least one closed question, entries spanning multiple days — surface a prompt: "this might be ready to write." GPT suggests a title and 3-point thesis drawn from the specific entries. Not a nudge to write more; a signal that you already have.
+
+### graph rag
+
+- **how did i get here?** — trace the full lineage of a current thought — which entry spawned which question, which answer shifted your thinking, what the chain looks like going all the way back.
+- **what changed my mind?** — find pairs of entries that are semantically similar but conceptually divergent, then trace what happened between them. Follow the path that moved you.
+- **shortest path between two ideas** — pick any two entries that feel unrelated. Walk the network and find the 2–3 bridging concepts that actually connect them. Often the most generative insight the tool can offer.
+- **what's unresolved in this thread?** — walk a cluster and surface the specific questions that were never closed — not a global list, but the gaps unique to a particular area of your thinking.
+
+### external sources
+
+- **hacker news feed** — pull top stories via the public HN API and filter them through your graph — only surface articles that are semantically close to your existing clusters. Not reading HN; reading the parts of HN that matter to your thinking specifically.
+- **rss / substack feeds** — add RSS feeds from writers you follow (most Substacks expose one). Articles get embedded and matched against your garden — surfaced when they connect to something you're already thinking about.
+- **capture from article** — one-tap to pull an external article into the garden as a capture seed — skips the blank page and starts from something you've already read.
+
+### longer horizon
+
+- **spatial garden view** — a density-based visual of your garden — clusters as areas, high-centrality nodes labeled, navigated by curiosity rather than chronology. The map of your own thinking.
+- **field emergence** — when a cluster reaches sufficient density, GPT synthesises it into a named field — what it's about, what's still open, who's thought hardest about it. Discovery, not suggestion.
+- **multi-garden networking** — find structural similarity between your clusters and someone else's — not by shared tags, but by geometric proximity in embedding space. A meaningful introduction across fields.
+
+---
+
 ## Lessons learned
 
 *(Add entries here as you go — surprises, things that didn't match the theory, decisions made and why)*
