@@ -170,6 +170,126 @@ button:disabled { opacity: 0.4; cursor: default; }
   padding: 48px 40px;
 }
 
+/* MOBILE — hidden on desktop */
+.mobile-top-bar,
+.mobile-subtab-bar,
+.bottom-tab-bar {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .app-layout {
+    flex-direction: column;
+  }
+
+  /* Hide desktop sidebar */
+  .sidebar {
+    display: none;
+  }
+
+  /* Mobile top bar */
+  .mobile-top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    z-index: 10;
+  }
+
+  .mobile-title {
+    font-size: 15px;
+    letter-spacing: 0.04em;
+    color: var(--text);
+    cursor: pointer;
+  }
+
+  .mobile-garden-switcher {
+    display: flex;
+    gap: 2px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 2px;
+  }
+
+  .mobile-gs {
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    letter-spacing: 0.02em;
+    color: var(--text-muted);
+    transition: all 0.15s;
+  }
+
+  .mobile-gs.active {
+    background: white;
+    color: var(--text);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+
+  /* Mobile sub-tab row */
+  .mobile-subtab-bar {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid var(--border);
+    padding: 0 16px;
+    background: var(--bg);
+  }
+
+  .mobile-subtab {
+    font-size: 13px;
+    color: var(--text-muted);
+    padding: 10px 14px;
+    border-bottom: 2px solid transparent;
+    transition: color 0.15s, border-color 0.15s;
+  }
+
+  .mobile-subtab.active {
+    color: var(--text);
+    border-bottom-color: var(--accent);
+  }
+
+  /* Main content */
+  .main-content {
+    padding: 24px 16px 100px; /* bottom padding for tab bar */
+    max-width: 100%;
+  }
+
+  /* Bottom tab bar */
+  .bottom-tab-bar {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--bg);
+    border-top: 1px solid var(--border);
+    z-index: 20;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .bottom-tab {
+    flex: 1;
+    padding: 12px 8px;
+    font-size: 13px;
+    letter-spacing: 0.02em;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    transition: color 0.15s;
+  }
+
+  .bottom-tab.active {
+    color: var(--accent);
+  }
+}
+
 /* CARRYING BAR */
 .capture-shell {
   display: flex;

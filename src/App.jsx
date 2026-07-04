@@ -66,8 +66,11 @@ export default function App() {
     setView('explore')
   }
 
+  const hasSubtabs = view === 'explore' || view === 'shape'
+
   return (
     <div className="app-layout">
+      {/* Desktop sidebar */}
       <aside className="sidebar">
         <span className="sidebar-title" onClick={() => { setView('capture'); setRespondingTo(null) }}>
           knowledge garden
@@ -121,7 +124,41 @@ export default function App() {
         </div>
       </aside>
 
+      {/* Mobile top bar */}
+      <div className="mobile-top-bar">
+        <span className="mobile-title" onClick={() => { setView('capture'); setRespondingTo(null) }}>
+          knowledge garden
+        </span>
+        <div className="mobile-garden-switcher">
+          <button className={garden === 'ai' ? 'mobile-gs active' : 'mobile-gs'} onClick={() => setGarden('ai')}>ai</button>
+          <button className={garden === 'world' ? 'mobile-gs active' : 'mobile-gs'} onClick={() => setGarden('world')}>world</button>
+          <button className={garden === 'culture' ? 'mobile-gs active' : 'mobile-gs'} onClick={() => setGarden('culture')}>culture</button>
+        </div>
+      </div>
+
       <main className="main-content">
+        {/* Mobile sub-tabs */}
+        {hasSubtabs && (
+          <div className="mobile-subtab-bar">
+            {view === 'explore' && (
+              <>
+                <button className={exploreTab === 'ask' ? 'mobile-subtab active' : 'mobile-subtab'} onClick={() => setExploreTab('ask')}>ask</button>
+                <button className={exploreTab === 'discover' ? 'mobile-subtab active' : 'mobile-subtab'} onClick={() => { setDiscoverConcept(null); setExploreTab('discover') }}>discover</button>
+                <button className={exploreTab === 'digest' ? 'mobile-subtab active' : 'mobile-subtab'} onClick={() => setExploreTab('digest')}>digest</button>
+              </>
+            )}
+            {view === 'shape' && (
+              <>
+                <button className={shapeTab === 'garden' ? 'mobile-subtab active' : 'mobile-subtab'} onClick={() => setShapeTab('garden')}>garden</button>
+                <button className={shapeTab === 'foundation' ? 'mobile-subtab active' : 'mobile-subtab'} onClick={() => setShapeTab('foundation')}>foundation</button>
+                <button className={shapeTab === 'questions' ? 'mobile-subtab active' : 'mobile-subtab'} onClick={() => setShapeTab('questions')}>
+                  questions {openQuestions.length > 0 && <span className="q-count">{openQuestions.length}</span>}
+                </button>
+              </>
+            )}
+          </div>
+        )}
+
         {view === 'capture' && (
           <div className="capture-shell">
             {openQuestions.length > 0 && (
@@ -170,6 +207,29 @@ export default function App() {
           </>
         )}
       </main>
+
+      {/* Mobile bottom tab bar */}
+      <nav className="bottom-tab-bar">
+        <button
+          className={view === 'capture' ? 'bottom-tab active' : 'bottom-tab'}
+          onClick={() => { setView('capture'); setRespondingTo(null) }}
+        >
+          capture
+          {openQuestions.length > 0 && <span className="q-count">{openQuestions.length}</span>}
+        </button>
+        <button
+          className={view === 'explore' ? 'bottom-tab active' : 'bottom-tab'}
+          onClick={() => setView('explore')}
+        >
+          explore
+        </button>
+        <button
+          className={view === 'shape' ? 'bottom-tab active' : 'bottom-tab'}
+          onClick={() => setView('shape')}
+        >
+          shape
+        </button>
+      </nav>
     </div>
   )
 }
