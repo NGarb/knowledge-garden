@@ -44,17 +44,23 @@ function parseRss(xml, limit = 30) {
 
 async function fetchWorldArticles() {
   const sources = [
-    'https://feeds.bbci.co.uk/news/world/rss.xml',
-    'https://www.theguardian.com/world/rss'
+    { url: 'https://feeds.reuters.com/reuters/worldNews', limit: 20 },
+    { url: 'https://rsshub.app/apnews/topics/world-news', limit: 20 },
+    { url: 'https://rss.nytimes.com/services/xml/rss/nyt/World.xml', limit: 20 },
+    { url: 'https://www.aljazeera.com/xml/rss/all.xml', limit: 15 },
+    { url: 'https://feeds.bbci.co.uk/news/world/rss.xml', limit: 15 },
+    { url: 'https://www.reddit.com/r/geopolitics/.rss', limit: 15 },
+    { url: 'https://www.foreignaffairs.com/rss.xml', limit: 10 },
+    { url: 'https://www.theguardian.com/world/rss', limit: 10 },
   ]
   const results = await Promise.allSettled(
-    sources.map(url =>
+    sources.map(({ url }) =>
       fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible)' } }).then(r => r.text())
     )
   )
   const all = []
-  for (const r of results) {
-    if (r.status === 'fulfilled') all.push(...parseRss(r.value, 25))
+  for (let i = 0; i < results.length; i++) {
+    if (results[i].status === 'fulfilled') all.push(...parseRss(results[i].value, sources[i].limit))
   }
   const seen = new Set()
   return all.filter(a => { if (seen.has(a.url)) return false; seen.add(a.url); return true })
