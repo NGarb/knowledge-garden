@@ -33,57 +33,121 @@ button {
 
 button:disabled { opacity: 0.4; cursor: default; }
 
-/* NAV */
-.nav {
+/* APP LAYOUT */
+.app-layout {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 20px 32px;
-  border-bottom: 1px solid var(--border);
+  min-height: 100vh;
 }
 
-.nav-title {
-  font-size: 17px;
+/* SIDEBAR */
+.sidebar {
+  width: 172px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--border);
+  padding: 28px 16px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.sidebar-title {
+  font-size: 15px;
   letter-spacing: 0.04em;
   cursor: pointer;
   color: var(--text);
+  line-height: 1.4;
 }
 
-.nav-links {
+.sidebar-nav {
   display: flex;
-  gap: 24px;
+  flex-direction: column;
+  gap: 2px;
 }
 
-.nav-links button {
+.sidebar-tab {
   font-size: 14px;
   color: var(--text-muted);
   letter-spacing: 0.02em;
+  padding: 6px 10px;
+  text-align: left;
+  border-radius: var(--radius);
+  border-left: 2px solid transparent;
+  transition: color 0.15s, background 0.15s, border-color 0.15s;
+  width: 100%;
 }
 
-.nav-links button.active { color: var(--text); }
+.sidebar-tab:hover { color: var(--text); background: var(--surface); }
 
-.garden-switcher {
-  display: flex;
-  gap: 2px;
+.sidebar-tab.active {
+  color: var(--text);
   background: var(--surface);
-  border: 1px solid var(--border);
+  border-left-color: var(--accent);
+}
+
+.sidebar-subtabs {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding-left: 12px;
+  margin-top: 2px;
+  margin-bottom: 4px;
+}
+
+.sidebar-subtab {
+  font-size: 13px;
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+  padding: 5px 10px;
+  text-align: left;
   border-radius: var(--radius);
-  padding: 3px;
+  border-left: 2px solid transparent;
+  transition: color 0.15s, background 0.15s, border-color 0.15s;
+}
+
+.sidebar-subtab:hover { color: var(--text); background: var(--surface); }
+
+.sidebar-subtab.active {
+  color: var(--text);
+  border-left-color: var(--accent);
+}
+
+.sidebar-garden-switcher {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: auto;
+}
+
+.sidebar-section-label {
+  font-size: 10px;
+  font-family: var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  padding: 0 10px;
+  margin-bottom: 4px;
 }
 
 .gs-btn {
-  padding: 5px 14px;
-  border-radius: 4px;
+  padding: 5px 10px;
+  border-radius: var(--radius);
   font-size: 13px;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.02em;
   color: var(--text-muted);
-  transition: all 0.15s;
+  text-align: left;
+  width: 100%;
+  transition: color 0.15s, background 0.15s;
 }
 
+.gs-btn:hover { color: var(--text); background: var(--surface); }
+
 .gs-btn.active {
-  background: white;
   color: var(--text);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  background: var(--surface);
 }
 
 .q-count {
@@ -98,11 +162,12 @@ button:disabled { opacity: 0.4; cursor: default; }
   vertical-align: middle;
 }
 
-/* MAIN */
-main {
+/* MAIN CONTENT */
+.main-content {
+  flex: 1;
+  min-width: 0;
   max-width: 800px;
-  margin: 0 auto;
-  padding: 48px 24px;
+  padding: 48px 40px;
 }
 
 /* CARRYING BAR */
@@ -135,45 +200,6 @@ main {
 
 .carrying-link:hover { text-decoration: underline; }
 
-/* TAB SHELL */
-.tab-shell {
-  display: flex;
-  flex-direction: row;
-  gap: 48px;
-  align-items: flex-start;
-}
-
-.tab-bar {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  flex-shrink: 0;
-  padding-top: 2px;
-}
-
-.tab {
-  font-size: 14px;
-  color: var(--text-muted);
-  letter-spacing: 0.02em;
-  padding: 6px 12px;
-  text-align: left;
-  border-radius: var(--radius);
-  border-left: 2px solid transparent;
-  transition: color 0.15s, background 0.15s, border-color 0.15s;
-}
-
-.tab:hover { color: var(--text); background: var(--surface); }
-
-.tab.active {
-  color: var(--text);
-  background: var(--surface);
-  border-left-color: var(--accent);
-}
-
-.tab-content {
-  flex: 1;
-  min-width: 0;
-}
 
 /* CAPTURE */
 .capture {
