@@ -133,9 +133,11 @@ export default function App() {
               <button className={exploreTab === 'discover' ? 'tab active' : 'tab'} onClick={() => { setDiscoverConcept(null); setExploreTab('discover') }}>discover</button>
               <button className={exploreTab === 'digest' ? 'tab active' : 'tab'} onClick={() => setExploreTab('digest')}>digest</button>
             </div>
-            {exploreTab === 'ask' && <Ask garden={garden} />}
-            {exploreTab === 'discover' && <Discover garden={garden} concept={discoverConcept} onSeed={handleSeed} />}
-            {exploreTab === 'digest' && <Digest garden={garden} onEntriesSaved={fetchAll} />}
+            <div className="tab-content">
+              {exploreTab === 'ask' && <Ask garden={garden} />}
+              {exploreTab === 'discover' && <Discover garden={garden} concept={discoverConcept} onSeed={handleSeed} />}
+              {exploreTab === 'digest' && <Digest garden={garden} onEntriesSaved={fetchAll} />}
+            </div>
           </div>
         )}
 
@@ -148,17 +150,19 @@ export default function App() {
                 questions {openQuestions.length > 0 && <span className="q-count">{openQuestions.length}</span>}
               </button>
             </div>
-            {shapeTab === 'garden' && <Garden entries={entries} openQuestions={openQuestions} onEntryUpdated={handleEntryUpdated} />}
-            {shapeTab === 'foundation' && (
-              <Foundation
-                garden={garden}
-                onCapture={concept => { setSeedContent(`${concept}\n\n`); setView('capture') }}
-                onDiscover={goToDiscover}
-              />
-            )}
-            {shapeTab === 'questions' && (
-              <Questions questions={openQuestions} entries={entries} onClose={handleQuestionClosed} onRespond={handleRespond} />
-            )}
+            <div className="tab-content">
+              {shapeTab === 'garden' && <Garden entries={entries} openQuestions={openQuestions} onEntryUpdated={handleEntryUpdated} />}
+              {shapeTab === 'foundation' && (
+                <Foundation
+                  garden={garden}
+                  onCapture={concept => { setSeedContent(`${concept}\n\n`); setView('capture') }}
+                  onDiscover={goToDiscover}
+                />
+              )}
+              {shapeTab === 'questions' && (
+                <Questions questions={openQuestions} entries={entries} onClose={handleQuestionClosed} onRespond={handleRespond} />
+              )}
+            </div>
           </div>
         )}
       </main>
