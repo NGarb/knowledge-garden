@@ -105,6 +105,68 @@ main {
   padding: 48px 24px;
 }
 
+/* CARRYING BAR */
+.capture-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.carrying-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.carrying-label {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.carrying-link {
+  font-size: 13px;
+  color: var(--accent);
+  padding: 0;
+}
+
+.carrying-link:hover { text-decoration: underline; }
+
+/* TAB SHELL */
+.tab-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.tab-bar {
+  display: flex;
+  gap: 24px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 12px;
+}
+
+.tab {
+  font-size: 14px;
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+  padding: 0;
+  padding-bottom: 12px;
+  margin-bottom: -13px;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.tab:hover { color: var(--text); }
+
+.tab.active {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+
 /* CAPTURE */
 .capture {
   display: flex;
