@@ -21,6 +21,12 @@ export default async function handler(req, res) {
   const sql = neon(process.env.DATABASE_URL)
   const embeddingStr = JSON.stringify(embedding)
 
+  // Diagnostic: count entries and check for null embeddings
+  const [{ total, with_embeddings }] = await sql`
+    SELECT COUNT(*) AS total, COUNT(embedding) AS with_embeddings
+    FROM entries WHERE garden = ${garden}
+  `
+
   // Hybrid search: vector + full-text, fused with RRF (k=60)
   // Each leg returns up to 20 candidates; RRF re-ranks by combined position
   const entries = await sql`
@@ -30,6 +36,7 @@ export default async function handler(req, res) {
              ROW_NUMBER() OVER (ORDER BY embedding <-> ${embeddingStr}::vector) AS rn
       FROM entries
       WHERE garden = ${garden}
+        AND embedding IS NOT NULL
         AND 1 - (embedding <-> ${embeddingStr}::vector) > 0.3
       ORDER BY embedding <-> ${embeddingStr}::vector
       LIMIT 20
@@ -63,7 +70,8 @@ export default async function handler(req, res) {
   if (entries.length === 0) {
     return res.json({
       answer: "I don't know yet — your garden doesn't have anything on this topic. Keep capturing and it will grow.",
-      sources: []
+      sources: [],
+      _debug: { total: Number(total), with_embeddings: Number(with_embeddings), garden }
     })
   }
 
