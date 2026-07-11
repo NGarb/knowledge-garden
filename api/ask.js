@@ -9,7 +9,6 @@ export default async function handler(req, res) {
   const openaiKey = process.env.OPENAI_API_KEY
   const anthropicKey = process.env.ANTHROPIC_API_KEY
 
-  // Embed the question
   const embedRes = await fetch('https://api.openai.com/v1/embeddings', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${openaiKey}` },
@@ -19,18 +18,46 @@ export default async function handler(req, res) {
   if (!embedRes.ok) return res.status(500).json({ error: embedData })
 
   const embedding = embedData.data[0].embedding
-
-  // Find relevant entries via pgvector
   const sql = neon(process.env.DATABASE_URL)
   const embeddingStr = JSON.stringify(embedding)
+
+  // Hybrid search: vector + full-text, fused with RRF (k=60)
+  // Each leg returns up to 20 candidates; RRF re-ranks by combined position
   const entries = await sql`
-    SELECT id, content, category, tags,
-           1 - (embedding <-> ${embeddingStr}::vector) AS similarity
-    FROM entries
-    WHERE garden = ${garden}
-      AND 1 - (embedding <-> ${embeddingStr}::vector) > 0.6
-    ORDER BY embedding <-> ${embeddingStr}::vector
-    LIMIT 6
+    WITH vector_search AS (
+      SELECT id, content, category, tags,
+             1 - (embedding <-> ${embeddingStr}::vector) AS similarity,
+             ROW_NUMBER() OVER (ORDER BY embedding <-> ${embeddingStr}::vector) AS rn
+      FROM entries
+      WHERE garden = ${garden}
+        AND 1 - (embedding <-> ${embeddingStr}::vector) > 0.3
+      ORDER BY embedding <-> ${embeddingStr}::vector
+      LIMIT 20
+    ),
+    fts_search AS (
+      SELECT id, content, category, tags,
+             ts_rank(to_tsvector('english', content), plainto_tsquery('english', ${question})) AS fts_score,
+             ROW_NUMBER() OVER (ORDER BY ts_rank(to_tsvector('english', content), plainto_tsquery('english', ${question})) DESC) AS rn
+      FROM entries
+      WHERE garden = ${garden}
+        AND to_tsvector('english', content) @@ plainto_tsquery('english', ${question})
+      LIMIT 20
+    ),
+    rrf AS (
+      SELECT
+        COALESCE(v.id, f.id) AS id,
+        COALESCE(v.content, f.content) AS content,
+        COALESCE(v.category, f.category) AS category,
+        COALESCE(v.tags, f.tags) AS tags,
+        COALESCE(v.similarity, 0) AS similarity,
+        COALESCE(1.0 / (60 + v.rn), 0) + COALESCE(1.0 / (60 + f.rn), 0) AS rrf_score
+      FROM vector_search v
+      FULL OUTER JOIN fts_search f ON v.id = f.id
+    )
+    SELECT id, content, category, tags, similarity, rrf_score
+    FROM rrf
+    ORDER BY rrf_score DESC
+    LIMIT 8
   `
 
   if (entries.length === 0) {
@@ -69,6 +96,13 @@ export default async function handler(req, res) {
 
   return res.json({
     answer,
-    sources: entries.map(e => ({ id: e.id, content: e.content, category: e.category, tags: e.tags, similarity: e.similarity }))
+    sources: entries.map(e => ({
+      id: e.id,
+      content: e.content,
+      category: e.category,
+      tags: e.tags,
+      similarity: e.similarity,
+      rrf_score: e.rrf_score
+    }))
   })
 }
