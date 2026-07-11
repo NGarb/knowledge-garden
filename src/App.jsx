@@ -185,7 +185,7 @@ export default function App() {
 
         {view === 'explore' && (
           <>
-            {exploreTab === 'ask' && <Ask garden={garden} />}
+            {exploreTab === 'ask' && <Ask garden={garden} onCaptureDelta={content => { setSeedContent(content); setView('capture') }} />}
             {exploreTab === 'discover' && <Discover garden={garden} concept={discoverConcept} onSeed={handleSeed} />}
             {exploreTab === 'digest' && <Digest garden={garden} onEntriesSaved={fetchAll} />}
           </>
