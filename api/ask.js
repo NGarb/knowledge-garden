@@ -32,13 +32,13 @@ export default async function handler(req, res) {
   const entries = await sql`
     WITH vector_search AS (
       SELECT id, content, category, tags,
-             1 - (embedding <-> ${embeddingStr}::vector) AS similarity,
-             ROW_NUMBER() OVER (ORDER BY embedding <-> ${embeddingStr}::vector) AS rn
+             1 - (embedding <=> ${embeddingStr}::vector) AS similarity,
+             ROW_NUMBER() OVER (ORDER BY embedding <=> ${embeddingStr}::vector) AS rn
       FROM entries
       WHERE garden = ${garden}
         AND embedding IS NOT NULL
-        AND 1 - (embedding <-> ${embeddingStr}::vector) > 0.3
-      ORDER BY embedding <-> ${embeddingStr}::vector
+        AND 1 - (embedding <=> ${embeddingStr}::vector) > 0.3
+      ORDER BY embedding <=> ${embeddingStr}::vector
       LIMIT 20
     ),
     fts_search AS (

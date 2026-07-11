@@ -73,11 +73,11 @@ Respond ONLY with a valid JSON object, no markdown fences:
     const entriesEmbeddingStr = JSON.stringify(entriesEmbedding)
     const relatedEntries = await sql`
       SELECT id, content, category, tags, type,
-             1 - (embedding <-> ${entriesEmbeddingStr}::vector) AS similarity
+             1 - (embedding <=> ${entriesEmbeddingStr}::vector) AS similarity
       FROM entries
       WHERE garden = ${garden}
-        AND 1 - (embedding <-> ${entriesEmbeddingStr}::vector) > 0.6
-      ORDER BY embedding <-> ${entriesEmbeddingStr}::vector
+        AND 1 - (embedding <=> ${entriesEmbeddingStr}::vector) > 0.6
+      ORDER BY embedding <=> ${entriesEmbeddingStr}::vector
       LIMIT 5
     `
 
@@ -87,12 +87,12 @@ Respond ONLY with a valid JSON object, no markdown fences:
     const questionsEmbeddingStr = JSON.stringify(questionsEmbedding)
     const connectedQuestions = await sql`
       SELECT id, text, entry_id,
-             1 - (embedding <-> ${questionsEmbeddingStr}::vector) AS similarity
+             1 - (embedding <=> ${questionsEmbeddingStr}::vector) AS similarity
       FROM questions
       WHERE closed_at IS NULL
         AND garden = ${garden}
-        AND 1 - (embedding <-> ${questionsEmbeddingStr}::vector) > 0.55
-      ORDER BY embedding <-> ${questionsEmbeddingStr}::vector
+        AND 1 - (embedding <=> ${questionsEmbeddingStr}::vector) > 0.55
+      ORDER BY embedding <=> ${questionsEmbeddingStr}::vector
       LIMIT 5
     `
 

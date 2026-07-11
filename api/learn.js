@@ -27,11 +27,11 @@ export default async function handler(req, res) {
       const embeddingStr = JSON.stringify(embedding)
       const entries = await sql`
         SELECT content, category, tags,
-               1 - (embedding <-> ${embeddingStr}::vector) AS similarity
+               1 - (embedding <=> ${embeddingStr}::vector) AS similarity
         FROM entries
         WHERE garden = ${garden}
-          AND 1 - (embedding <-> ${embeddingStr}::vector) > 0.55
-        ORDER BY embedding <-> ${embeddingStr}::vector
+          AND 1 - (embedding <=> ${embeddingStr}::vector) > 0.55
+        ORDER BY embedding <=> ${embeddingStr}::vector
         LIMIT 5
       `
       if (entries.length > 0) {
