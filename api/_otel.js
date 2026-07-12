@@ -21,10 +21,10 @@ export function getProvider() {
   })
 
   _provider = new BasicTracerProvider({
+    spanProcessors: [new SimpleSpanProcessor(exporter)],
     resource: resourceFromAttributes({ [ATTR_SERVICE_NAME]: 'knowledge-garden-vercel' }),
   })
-  _provider.addSpanProcessor(new SimpleSpanProcessor(exporter))
-  _provider.register()
+  trace.setGlobalTracerProvider(_provider)
 
   return _provider
 }
