@@ -1,41 +1,57 @@
 import { neon } from '@neondatabase/serverless'
 import { randomUUID } from 'crypto'
+import { withSpan, spanFn } from './_otel.js'
+import { initSentry, captureException, flushSentry } from './_sentry.js'
+import { trace } from '@opentelemetry/api'
 
-export default async function handler(req, res) {
+initSentry()
+
+export default withSpan('api.entries', async function handler(req, res) {
   const sql = neon(process.env.DATABASE_URL)
+  const span = trace.getActiveSpan()
 
   if (req.method === 'GET') {
     const garden = req.query.garden || 'ai'
-    const rows = await sql`SELECT * FROM entries WHERE garden = ${garden} ORDER BY created_at DESC`
+    span?.setAttribute('garden.name', garden)
+
+    const rows = await spanFn('postgres.select', { 'db.system': 'postgresql', 'db.operation': 'SELECT' }, async (s) => {
+      const r = await sql`SELECT * FROM entries WHERE garden = ${garden} ORDER BY created_at DESC`
+      s.setAttribute('db.result_count', r.length)
+      return r
+    })
+
+    await flushSentry()
     return res.json(rows)
   }
 
   if (req.method === 'POST') {
     const { id, type, content, category, tags, embedding, garden } = req.body
     if (!type || !content) return res.status(400).json({ error: 'Missing required fields' })
+
+    span?.setAttributes({ 'garden.name': garden || 'ai', 'entry.type': type })
+
     const embeddingStr = JSON.stringify(embedding)
     const g = garden || 'ai'
     const entryId = id || randomUUID()
+
     try {
-      const [row] = await sql`
-        INSERT INTO entries (id, type, content, category, tags, embedding, garden)
-        VALUES (
-          ${entryId}::uuid,
-          ${type},
-          ${content},
-          ${category ?? null},
-          ${tags ?? null},
-          ${embeddingStr}::vector,
-          ${g}
-        )
-        RETURNING id, type, content, category, tags, garden, created_at
-      `
+      const row = await spanFn('postgres.insert', { 'db.system': 'postgresql', 'db.operation': 'INSERT' }, async () => {
+        const [r] = await sql`
+          INSERT INTO entries (id, type, content, category, tags, embedding, garden)
+          VALUES (${entryId}::uuid, ${type}, ${content}, ${category ?? null}, ${tags ?? null}, ${embeddingStr}::vector, ${g})
+          RETURNING id, type, content, category, tags, garden, created_at
+        `
+        return r
+      })
+      await flushSentry()
       return res.json(row)
     } catch (e) {
       console.error('entries POST error:', e)
+      captureException(e)
+      await flushSentry()
       return res.status(500).json({ error: e.message })
     }
   }
 
-  res.status(405).end()
-}
+  return res.status(405).end()
+})

@@ -111,7 +111,13 @@ async function fetchAiArticles() {
   return [...hn, ...arxiv]
 }
 
-export default async function handler(req, res) {
+import { withSpan, spanFn } from './_otel.js'
+import { initSentry, captureException, flushSentry } from './_sentry.js'
+import { trace } from '@opentelemetry/api'
+
+initSentry()
+
+export default withSpan('api.discover', async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end()
 
   const sql = neon(process.env.DATABASE_URL)
@@ -120,32 +126,36 @@ export default async function handler(req, res) {
   const garden = req.query.garden || 'ai'
   const concept = req.query.concept || null
 
+  trace.getActiveSpan()?.setAttributes({ 'garden.name': garden, 'discover.mode': concept ? 'concept' : 'garden' })
+
   // Concept-specific: use Exa to search directly rather than reranking a fixed pool
   if (concept) {
-    const exaRes = await fetch('https://api.exa.ai/search', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': exaKey },
-      body: JSON.stringify({
-        query: concept,
-        numResults: 10,
-        type: 'neural',
-        useAutoprompt: true,
-        contents: { title: true }
+    try {
+      const articles = await spanFn('exa.search', { 'search.query': concept }, async () => {
+        const exaRes = await fetch('https://api.exa.ai/search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-api-key': exaKey },
+          body: JSON.stringify({ query: concept, numResults: 10, type: 'neural', useAutoprompt: true, contents: { title: true } }),
+        })
+        const exaData = await exaRes.json()
+        if (!exaRes.ok) throw Object.assign(new Error('exa search failed'), { body: exaData })
+        return (exaData.results || []).map(r => ({
+          id: r.id || r.url,
+          title: r.title,
+          url: r.url,
+          time: r.publishedDate ? Math.floor(new Date(r.publishedDate).getTime() / 1000) : Math.floor(Date.now() / 1000),
+          relevance: r.score ?? null,
+          score: 0,
+          comments: 0,
+        }))
       })
-    })
-    const exaData = await exaRes.json()
-    if (!exaRes.ok) return res.status(500).json({ error: exaData })
-
-    const articles = (exaData.results || []).map(r => ({
-      id: r.id || r.url,
-      title: r.title,
-      url: r.url,
-      time: r.publishedDate ? Math.floor(new Date(r.publishedDate).getTime() / 1000) : Math.floor(Date.now() / 1000),
-      relevance: r.score ?? null,
-      score: 0,
-      comments: 0
-    }))
-    return res.json(articles)
+      await flushSentry()
+      return res.json(articles)
+    } catch (e) {
+      captureException(e)
+      await flushSentry()
+      return res.status(500).json({ error: e.body ?? e.message })
+    }
   }
 
   // Garden-wide: fetch from fixed sources and rank by garden centroid
@@ -155,16 +165,16 @@ export default async function handler(req, res) {
       ? await fetchCultureArticles()
       : await fetchAiArticles()
 
-  if (articles.length === 0) return res.json([])
+  if (articles.length === 0) { await flushSentry(); return res.json([]) }
 
-  const entries = await sql`
-    SELECT embedding FROM entries
-    WHERE garden = ${garden}
-    ORDER BY created_at DESC
-    LIMIT 20
-  `
+  const entries = await spanFn('postgres.select', { 'db.system': 'postgresql' }, async (s) => {
+    const r = await sql`SELECT embedding FROM entries WHERE garden = ${garden} ORDER BY created_at DESC LIMIT 20`
+    s.setAttribute('db.result_count', r.length)
+    return r
+  })
 
   if (entries.length === 0) {
+    await flushSentry()
     return res.json(articles.slice(0, 8).map(a => ({ ...a, relevance: null })))
   }
 
@@ -178,24 +188,30 @@ export default async function handler(req, res) {
     .filter(Boolean)
 
   if (vectors.length === 0) {
+    await flushSentry()
     return res.json(articles.slice(0, 8).map(a => ({ ...a, relevance: null })))
   }
 
   const center = centroid(vectors)
-
   const titles = articles.map(a => a.title)
-  const embedRes = await fetch('https://api.openai.com/v1/embeddings', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
-    body: JSON.stringify({ model: 'text-embedding-3-small', input: titles })
-  })
-  const embedData = await embedRes.json()
-  if (!embedRes.ok) return res.status(500).json({ error: embedData })
 
-  const embeddings = embedData.data
-    .slice()
-    .sort((a, b) => a.index - b.index)
-    .map(d => d.embedding)
+  let embeddings
+  try {
+    embeddings = await spanFn('openai.embed', { 'llm.model': 'text-embedding-3-small', 'embed.batch_size': titles.length }, async () => {
+      const embedRes = await fetch('https://api.openai.com/v1/embeddings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
+        body: JSON.stringify({ model: 'text-embedding-3-small', input: titles }),
+      })
+      const embedData = await embedRes.json()
+      if (!embedRes.ok) throw Object.assign(new Error('embed failed'), { body: embedData })
+      return embedData.data.slice().sort((a, b) => a.index - b.index).map(d => d.embedding)
+    })
+  } catch (e) {
+    captureException(e)
+    await flushSentry()
+    return res.status(500).json({ error: e.body ?? e.message })
+  }
 
   const scored = articles.map((a, i) => ({ ...a, relevance: cosineSim(center, embeddings[i]) }))
   const maxScore = Math.max(...scored.map(a => a.score || 0), 1)
@@ -203,5 +219,6 @@ export default async function handler(req, res) {
     .map(a => ({ ...a, _rank: 0.6 * a.relevance + 0.4 * ((a.score || 0) / maxScore) }))
     .sort((a, b) => b._rank - a._rank)
 
-  res.json(ranked.slice(0, 10))
-}
+  await flushSentry()
+  return res.json(ranked.slice(0, 10))
+})

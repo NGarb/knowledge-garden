@@ -1,42 +1,62 @@
 import { neon } from '@neondatabase/serverless'
+import { withSpan, spanFn } from './_otel.js'
+import { initSentry, captureException, flushSentry } from './_sentry.js'
+import { trace } from '@opentelemetry/api'
 
-export default async function handler(req, res) {
+initSentry()
+
+export default withSpan('api.learn', async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()
 
   const { messages, garden = 'ai', context_fetched = false, garden_context = null } = req.body
   if (!messages?.length) return res.status(400).json({ error: 'messages required' })
+
+  const span = trace.getActiveSpan()
+  span?.setAttributes({
+    'garden.name': garden,
+    'llm.model': 'claude-sonnet-4-6',
+    'conversation.turns': messages.length,
+  })
 
   const openaiKey = process.env.OPENAI_API_KEY
   const anthropicKey = process.env.ANTHROPIC_API_KEY
 
   let gardenContext = garden_context
 
-  // Only fetch garden context on the first turn
   if (!context_fetched) {
     const firstUserMessage = messages[0]?.content || ''
-    const embedRes = await fetch('https://api.openai.com/v1/embeddings', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${openaiKey}` },
-      body: JSON.stringify({ model: 'text-embedding-3-small', input: firstUserMessage })
-    })
-    const embedData = await embedRes.json()
+    try {
+      gardenContext = await spanFn(
+        'postgres.vector_search',
+        { 'db.system': 'postgresql', 'garden.name': garden },
+        async (dbSpan) => {
+          const embedRes = await fetch('https://api.openai.com/v1/embeddings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${openaiKey}` },
+            body: JSON.stringify({ model: 'text-embedding-3-small', input: firstUserMessage }),
+          })
+          const embedData = await embedRes.json()
+          if (!embedRes.ok) return null
 
-    if (embedRes.ok) {
-      const embedding = embedData.data[0].embedding
-      const sql = neon(process.env.DATABASE_URL)
-      const embeddingStr = JSON.stringify(embedding)
-      const entries = await sql`
-        SELECT content, category, tags,
-               1 - (embedding <=> ${embeddingStr}::vector) AS similarity
-        FROM entries
-        WHERE garden = ${garden}
-          AND 1 - (embedding <=> ${embeddingStr}::vector) > 0.55
-        ORDER BY embedding <=> ${embeddingStr}::vector
-        LIMIT 5
-      `
-      if (entries.length > 0) {
-        gardenContext = entries.map(e => `- ${e.content}`).join('\n')
-      }
+          const embedding = embedData.data[0].embedding
+          const sql = neon(process.env.DATABASE_URL)
+          const embeddingStr = JSON.stringify(embedding)
+          const entries = await sql`
+            SELECT content, category, tags,
+                   1 - (embedding <=> ${embeddingStr}::vector) AS similarity
+            FROM entries
+            WHERE garden = ${garden}
+              AND 1 - (embedding <=> ${embeddingStr}::vector) > 0.55
+            ORDER BY embedding <=> ${embeddingStr}::vector
+            LIMIT 5
+          `
+          dbSpan.setAttribute('db.result_count', entries.length)
+          return entries.length > 0 ? entries.map(e => `- ${e.content}`).join('\n') : null
+        },
+      )
+    } catch (e) {
+      captureException(e)
+      // Non-fatal — continue without garden context
     }
   }
 
@@ -54,26 +74,36 @@ ${gardenContext ? `Context from their knowledge garden (use this to connect idea
 
 You are not here to answer questions. You are here to help them think better.`
 
-  const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': anthropicKey,
-      'anthropic-version': '2023-06-01'
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 512,
-      system: systemPrompt,
-      messages
-    })
-  })
+  let reply
+  try {
+    reply = await spanFn(
+      'anthropic.messages',
+      { 'llm.model': 'claude-sonnet-4-6', 'llm.max_tokens': 512 },
+      async (llmSpan) => {
+        const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': anthropicKey,
+            'anthropic-version': '2023-06-01',
+          },
+          body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 512, system: systemPrompt, messages }),
+        })
+        const claudeData = await claudeRes.json()
+        if (!claudeRes.ok) throw Object.assign(new Error('anthropic failed'), { body: claudeData })
+        llmSpan.setAttributes({
+          'llm.input_tokens': claudeData.usage?.input_tokens ?? 0,
+          'llm.output_tokens': claudeData.usage?.output_tokens ?? 0,
+        })
+        return claudeData.content[0].text
+      },
+    )
+  } catch (e) {
+    captureException(e)
+    await flushSentry()
+    return res.status(500).json({ error: e.body ?? e.message })
+  }
 
-  const claudeData = await claudeRes.json()
-  if (!claudeRes.ok) return res.status(500).json({ error: claudeData })
-
-  return res.json({
-    reply: claudeData.content[0].text,
-    garden_context: gardenContext
-  })
-}
+  await flushSentry()
+  return res.json({ reply, garden_context: gardenContext })
+})
