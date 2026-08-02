@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { exportEntryToZettelkasten } from '../utils/zettelkasten-export.js'
 
 const CATEGORY_COLORS = {
   Insight:    '#4a7c59',
@@ -23,6 +24,7 @@ export default function Capture({ garden, openQuestions, onSaved, respondingTo, 
   const [gap, setGap] = useState(null)
   const [suggestedQuestions, setSuggestedQuestions] = useState([])
   const [error, setError] = useState(null)
+  const [exportMessage, setExportMessage] = useState(null)
   const questionRef = useRef(null)
 
   useEffect(() => {
@@ -130,6 +132,15 @@ export default function Capture({ garden, openQuestions, onSaved, respondingTo, 
       if (!entryRes.ok) throw new Error('Failed to save entry')
       const entry = await entryRes.json()
 
+      // Export to Zettelkasten after successful save
+      const exportResult = await exportEntryToZettelkasten(entry)
+      if (!exportResult.success) {
+        console.warn('Zettelkasten export warning:', exportResult.message)
+        setExportMessage(exportResult.message)
+      } else {
+        setExportMessage(exportResult.message)
+      }
+
       let question = null
       if (newQuestion.trim()) {
         const qRes = await fetch('/api/questions', {
@@ -179,6 +190,7 @@ export default function Capture({ garden, openQuestions, onSaved, respondingTo, 
     setGap(null)
     setSuggestedQuestions([])
     setError(null)
+    setExportMessage(null)
   }
 
   function handleBack() {
@@ -205,6 +217,7 @@ export default function Capture({ garden, openQuestions, onSaved, respondingTo, 
     return (
       <div className="capture saved-state">
         <p className="saved-msg">saved.</p>
+        {exportMessage && <p className="export-msg">{exportMessage}</p>}
         <button className="capture-another" onClick={handleReset}>capture another</button>
       </div>
     )
