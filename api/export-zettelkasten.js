@@ -6,6 +6,25 @@ import { initSentry, captureException, flushSentry } from './_sentry.js'
 initSentry()
 
 /**
+ * Generate filename-safe slug from content
+ */
+function slugifyContent(content) {
+  if (!content) return 'note'
+
+  // Take first line, remove quotes, take first 50 chars
+  const firstLine = content.split('\n')[0]
+    .replace(/^["']|["']$/g, '')
+    .substring(0, 50)
+    .toLowerCase()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '')
+
+  return firstLine || 'note'
+}
+
+/**
  * Convert entry object to YAML frontmatter string
  */
 function generateYAMLFrontmatter(entry) {
@@ -25,20 +44,6 @@ foundation: ${foundation === true ? 'true' : 'false'}
 embedding: ${embeddingStr}
 ---
 `
-}
-
-/**
- * Slugify title for filename
- */
-function slugifyTitle(title) {
-  if (!title) return 'note'
-  return title
-    .toLowerCase()
-    .trim()
-    .replace(/[^\w\s-]/g, '') // Remove special chars
-    .replace(/\s+/g, '-') // Replace spaces with hyphens
-    .replace(/-+/g, '-') // Collapse multiple hyphens
-    .replace(/^-+|-+$/g, '') // Remove leading/trailing hyphens
 }
 
 export default withSpan('api.export-zettelkasten', async function handler(req, res) {
@@ -65,8 +70,10 @@ export default withSpan('api.export-zettelkasten', async function handler(req, r
       await mkdir(gardenDir, { recursive: true })
     })
 
-    // Generate filename (use id as base)
-    const filename = `${id}.md`
+    // Generate readable filename from content + UUID suffix
+    const slug = slugifyContent(content)
+    const shortId = id.substring(0, 8)
+    const filename = `${slug}--${shortId}.md`
     const filepath = join(gardenDir, filename)
 
     // Generate YAML frontmatter
