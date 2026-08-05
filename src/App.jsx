@@ -1,63 +1,40 @@
 import { useState, useEffect } from 'react'
-import Capture from './components/Capture'
-import Garden from './components/Garden'
-import Questions from './components/Questions'
+import Home from './components/Home'
+import Ask from './components/Ask'
 import Discover from './components/Discover'
 import Digest from './components/Digest'
-import Ask from './components/Ask'
 import Foundation from './components/Foundation'
 
 export default function App() {
-  const [view, setView] = useState('capture')
+  const [view, setView] = useState('home')
   const [exploreTab, setExploreTab] = useState('ask')
-  const [shapeTab, setShapeTab] = useState('garden')
   const [garden, setGarden] = useState('ai')
   const [entries, setEntries] = useState([])
-  const [openQuestions, setOpenQuestions] = useState([])
-  const [respondingTo, setRespondingTo] = useState(null)
   const [seedContent, setSeedContent] = useState(null)
   const [discoverConcept, setDiscoverConcept] = useState(null)
+  const [showFoundation, setShowFoundation] = useState(false)
 
   useEffect(() => {
-    fetchAll()
+    fetchEntries()
   }, [garden])
 
-  async function fetchAll() {
-    const [entries, questions] = await Promise.all([
-      fetch(`/api/entries?garden=${garden}`).then(r => r.json()),
-      fetch(`/api/questions?garden=${garden}`).then(r => r.json())
-    ])
-    if (Array.isArray(entries)) setEntries(entries)
-    if (Array.isArray(questions)) setOpenQuestions(questions)
+  async function fetchEntries() {
+    const res = await fetch(`/api/entries?garden=${garden}`)
+    const data = await res.json()
+    if (Array.isArray(data)) setEntries(data)
   }
 
-  function handleEntrySaved(newEntry, newQuestion, closedIds) {
+  function handleEntrySaved(newEntry) {
     setEntries(prev => [newEntry, ...prev])
-    setOpenQuestions(prev => {
-      const remaining = prev.filter(q => !closedIds.has(q.id))
-      if (newQuestion) return [newQuestion, ...remaining]
-      return remaining
-    })
-    setRespondingTo(null)
   }
 
   function handleEntryUpdated(updatedEntry) {
     setEntries(prev => prev.map(e => e.id === updatedEntry.id ? updatedEntry : e))
   }
 
-  function handleQuestionClosed(questionId) {
-    setOpenQuestions(prev => prev.filter(q => q.id !== questionId))
-  }
-
-  function handleRespond(question) {
-    setRespondingTo(question)
-    setView('capture')
-  }
-
   function handleSeed(title, url) {
     setSeedContent(`${title}\n${url}\n\n`)
-    setRespondingTo(null)
-    setView('capture')
+    setView('home')
   }
 
   function goToDiscover(concept) {
@@ -66,23 +43,20 @@ export default function App() {
     setView('explore')
   }
 
-  const hasSubtabs = view === 'explore' || view === 'shape'
-
   return (
     <div className="app-layout">
       {/* Desktop sidebar */}
       <aside className="sidebar">
-        <span className="sidebar-title" onClick={() => { setView('capture'); setRespondingTo(null) }}>
+        <span className="sidebar-title" onClick={() => setView('home')}>
           knowledge garden
         </span>
 
         <nav className="sidebar-nav">
           <button
-            className={view === 'capture' ? 'sidebar-tab active' : 'sidebar-tab'}
-            onClick={() => { setView('capture'); setRespondingTo(null) }}
+            className={view === 'home' ? 'sidebar-tab active' : 'sidebar-tab'}
+            onClick={() => setView('home')}
           >
-            capture
-            {openQuestions.length > 0 && <span className="q-count">{openQuestions.length}</span>}
+            home
           </button>
 
           <button
@@ -98,22 +72,6 @@ export default function App() {
               <button className={exploreTab === 'digest' ? 'sidebar-subtab active' : 'sidebar-subtab'} onClick={() => setExploreTab('digest')}>digest</button>
             </div>
           )}
-
-          <button
-            className={view === 'shape' ? 'sidebar-tab active' : 'sidebar-tab'}
-            onClick={() => setView('shape')}
-          >
-            shape
-          </button>
-          {view === 'shape' && (
-            <div className="sidebar-subtabs">
-              <button className={shapeTab === 'garden' ? 'sidebar-subtab active' : 'sidebar-subtab'} onClick={() => setShapeTab('garden')}>garden</button>
-              <button className={shapeTab === 'foundation' ? 'sidebar-subtab active' : 'sidebar-subtab'} onClick={() => setShapeTab('foundation')}>foundation</button>
-              <button className={shapeTab === 'questions' ? 'sidebar-subtab active' : 'sidebar-subtab'} onClick={() => setShapeTab('questions')}>
-                questions {openQuestions.length > 0 && <span className="q-count">{openQuestions.length}</span>}
-              </button>
-            </div>
-          )}
         </nav>
 
         <div className="sidebar-garden-switcher">
@@ -122,88 +80,53 @@ export default function App() {
           <button className={garden === 'world' ? 'gs-btn active' : 'gs-btn'} onClick={() => setGarden('world')}>world</button>
           <button className={garden === 'culture' ? 'gs-btn active' : 'gs-btn'} onClick={() => setGarden('culture')}>culture</button>
         </div>
+
+        <button className="sidebar-foundation-btn" onClick={() => setShowFoundation(true)}>
+          foundation ⚙
+        </button>
       </aside>
 
       {/* Mobile top bar */}
       <div className="mobile-top-bar">
-        <span className="mobile-title" onClick={() => { setView('capture'); setRespondingTo(null) }}>
+        <span className="mobile-title" onClick={() => setView('home')}>
           knowledge garden
         </span>
-        <div className="mobile-garden-switcher">
-          <button className={garden === 'ai' ? 'mobile-gs active' : 'mobile-gs'} onClick={() => setGarden('ai')}>ai</button>
-          <button className={garden === 'world' ? 'mobile-gs active' : 'mobile-gs'} onClick={() => setGarden('world')}>world</button>
-          <button className={garden === 'culture' ? 'mobile-gs active' : 'mobile-gs'} onClick={() => setGarden('culture')}>culture</button>
+        <div className="mobile-top-bar-right">
+          <div className="mobile-garden-switcher">
+            <button className={garden === 'ai' ? 'mobile-gs active' : 'mobile-gs'} onClick={() => setGarden('ai')}>ai</button>
+            <button className={garden === 'world' ? 'mobile-gs active' : 'mobile-gs'} onClick={() => setGarden('world')}>world</button>
+            <button className={garden === 'culture' ? 'mobile-gs active' : 'mobile-gs'} onClick={() => setGarden('culture')}>culture</button>
+          </div>
+          <button className="mobile-gear-btn" onClick={() => setShowFoundation(true)}>⚙</button>
         </div>
       </div>
 
       <main className="main-content">
-        {/* Mobile sub-tabs */}
-        {hasSubtabs && (
+        {/* Explore sub-tabs (mobile) */}
+        {view === 'explore' && (
           <div className="mobile-subtab-bar">
-            {view === 'explore' && (
-              <>
-                <button className={exploreTab === 'ask' ? 'mobile-subtab active' : 'mobile-subtab'} onClick={() => setExploreTab('ask')}>ask</button>
-                <button className={exploreTab === 'discover' ? 'mobile-subtab active' : 'mobile-subtab'} onClick={() => { setDiscoverConcept(null); setExploreTab('discover') }}>discover</button>
-                <button className={exploreTab === 'digest' ? 'mobile-subtab active' : 'mobile-subtab'} onClick={() => setExploreTab('digest')}>digest</button>
-              </>
-            )}
-            {view === 'shape' && (
-              <>
-                <button className={shapeTab === 'garden' ? 'mobile-subtab active' : 'mobile-subtab'} onClick={() => setShapeTab('garden')}>garden</button>
-                <button className={shapeTab === 'foundation' ? 'mobile-subtab active' : 'mobile-subtab'} onClick={() => setShapeTab('foundation')}>foundation</button>
-                <button className={shapeTab === 'questions' ? 'mobile-subtab active' : 'mobile-subtab'} onClick={() => setShapeTab('questions')}>
-                  questions {openQuestions.length > 0 && <span className="q-count">{openQuestions.length}</span>}
-                </button>
-              </>
-            )}
+            <button className={exploreTab === 'ask' ? 'mobile-subtab active' : 'mobile-subtab'} onClick={() => setExploreTab('ask')}>ask</button>
+            <button className={exploreTab === 'discover' ? 'mobile-subtab active' : 'mobile-subtab'} onClick={() => { setDiscoverConcept(null); setExploreTab('discover') }}>discover</button>
+            <button className={exploreTab === 'digest' ? 'mobile-subtab active' : 'mobile-subtab'} onClick={() => setExploreTab('digest')}>digest</button>
           </div>
         )}
 
-        {view === 'capture' && (
-          <div className="capture-shell">
-{openQuestions.length > 0 && (
-              <div className="carrying-bar">
-                <span className="carrying-label">carrying</span>
-                <button
-                  className="carrying-link"
-                  onClick={() => { setShapeTab('questions'); setView('shape') }}
-                >
-                  {openQuestions.length} open question{openQuestions.length !== 1 ? 's' : ''} →
-                </button>
-              </div>
-            )}
-            <Capture
-              garden={garden}
-              openQuestions={openQuestions}
-              onSaved={(entry, question, closedIds) => { setSeedContent(null); handleEntrySaved(entry, question, closedIds) }}
-              respondingTo={respondingTo}
-              seedContent={seedContent}
-              onSeedConsumed={() => setSeedContent(null)}
-            />
-          </div>
+        {view === 'home' && (
+          <Home
+            garden={garden}
+            entries={entries}
+            onEntrySaved={handleEntrySaved}
+            onEntryUpdated={handleEntryUpdated}
+            seedContent={seedContent}
+            onSeedConsumed={() => setSeedContent(null)}
+          />
         )}
 
         {view === 'explore' && (
           <>
-            {exploreTab === 'ask' && <Ask garden={garden} onCaptureDelta={content => { setSeedContent(content); setView('capture') }} />}
+            {exploreTab === 'ask' && <Ask garden={garden} onCaptureDelta={content => { setSeedContent(content); setView('home') }} />}
             {exploreTab === 'discover' && <Discover garden={garden} concept={discoverConcept} onSeed={handleSeed} />}
-            {exploreTab === 'digest' && <Digest garden={garden} onEntriesSaved={fetchAll} />}
-          </>
-        )}
-
-        {view === 'shape' && (
-          <>
-            {shapeTab === 'garden' && <Garden entries={entries} openQuestions={openQuestions} onEntryUpdated={handleEntryUpdated} />}
-            {shapeTab === 'foundation' && (
-              <Foundation
-                garden={garden}
-                onCapture={concept => { setSeedContent(`${concept}\n\n`); setView('capture') }}
-                onDiscover={goToDiscover}
-              />
-            )}
-            {shapeTab === 'questions' && (
-              <Questions questions={openQuestions} entries={entries} onClose={handleQuestionClosed} onRespond={handleRespond} />
-            )}
+            {exploreTab === 'digest' && <Digest garden={garden} onEntriesSaved={fetchEntries} />}
           </>
         )}
       </main>
@@ -211,11 +134,10 @@ export default function App() {
       {/* Mobile bottom tab bar */}
       <nav className="bottom-tab-bar">
         <button
-          className={view === 'capture' ? 'bottom-tab active' : 'bottom-tab'}
-          onClick={() => { setView('capture'); setRespondingTo(null) }}
+          className={view === 'home' ? 'bottom-tab active' : 'bottom-tab'}
+          onClick={() => setView('home')}
         >
-          capture
-          {openQuestions.length > 0 && <span className="q-count">{openQuestions.length}</span>}
+          home
         </button>
         <button
           className={view === 'explore' ? 'bottom-tab active' : 'bottom-tab'}
@@ -223,13 +145,22 @@ export default function App() {
         >
           explore
         </button>
-        <button
-          className={view === 'shape' ? 'bottom-tab active' : 'bottom-tab'}
-          onClick={() => setView('shape')}
-        >
-          shape
-        </button>
       </nav>
+
+      {/* Foundation overlay */}
+      {showFoundation && (
+        <div className="foundation-overlay">
+          <div className="foundation-overlay-backdrop" onClick={() => setShowFoundation(false)} />
+          <div className="foundation-overlay-sheet">
+            <button className="foundation-overlay-close" onClick={() => setShowFoundation(false)}>close ×</button>
+            <Foundation
+              garden={garden}
+              onCapture={concept => { setSeedContent(`${concept}\n\n`); setShowFoundation(false); setView('home') }}
+              onDiscover={concept => { goToDiscover(concept); setShowFoundation(false) }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -1,0 +1,26 @@
+Objective
+Migrate agent-classify.js and digest.js from Vercel to Databricks Model Serving, replacing the current in-process agentic workflows with a properly structured MLflow ChatAgent that Vercel proxies to. All telemetry must land in Axiom as a single connected trace — React → Vercel proxy span → Databricks agent spans — using MLflow's native tracing as the instrumentation primitive rather than a hand-rolled OTel setup.
+
+Tasks
+1. Build the Databricks agent
+Implement the agent as an mlflow.pyfunc.ChatModel (or ChatAgent) with a predict() method that accepts {content, garden, agent} as input and returns structured JSON
+Instrument each step with @mlflow.trace — embed, query generation, classify, db write — so MLflow generates child spans automatically
+Configure MLflow to export traces to Axiom via the OTLP exporter, pointed at the same dataset as the Vercel functions
+Extract the incoming traceparent from the request headers and attach it as the parent context so Databricks spans nest under the Vercel proxy span
+Store secrets (OpenAI key, DB URL, Axiom key) via Databricks Secrets, not env vars
+Deploy to a Databricks Model Serving endpoint
+2. Add a Vercel proxy handler
+Create api/agent.js — a single handler that forwards POST /api/agent to the Model Serving endpoint
+Inject W3C trace headers (traceparent, tracestate, x-correlation-id) using the existing injectTraceHeaders() from _otel.js before the outbound fetch
+Wrap with withSpan('api.agent') so the proxy call appears as a root span with the Databricks response time as a child
+Handle auth: pass DATABRICKS_TOKEN as Authorization: Bearer on the outbound request
+3. Update the React UI
+Replace direct calls to /api/agent-classify in Capture.jsx (and any other component) with calls to /api/agent
+For digest.js, assess whether it moves to the same Model Serving endpoint (different agent param) or stays on Vercel
+4. Retire the old Vercel handlers
+Delete api/agent-classify.js and api/digest.js once the Model Serving endpoint is validated
+Remove their maxDuration entries from vercel.json
+5. End-to-end validation
+Trigger a classify request through the UI and confirm one trace in Axiom shows: [Vercel api.agent span] → [Databricks embed] → [Databricks LLM call] → [Databricks db write] as a connected waterfall, not orphaned traces
+Confirm Sentry captures any agent errors with the correct traceId tag
+Confirm cold-start latency on the Model Serving endpoint is acceptable for interactive use

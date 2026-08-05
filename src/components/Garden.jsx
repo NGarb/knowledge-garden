@@ -35,14 +35,12 @@ function LeafEntry({ leaf, date }) {
               </ul>
             </div>
           )}
-
           {leaf.method && (
             <div className="leaf-entry-section">
               <span className="leaf-entry-section-label">Method</span>
               <p>{leaf.method}</p>
             </div>
           )}
-
           {leaf.findings?.length > 0 && (
             <div className="leaf-entry-section">
               <span className="leaf-entry-section-label">Findings</span>
@@ -51,7 +49,6 @@ function LeafEntry({ leaf, date }) {
               </ul>
             </div>
           )}
-
           {leaf.benchmarks?.length > 0 && (
             <div className="leaf-entry-section">
               <span className="leaf-entry-section-label">Benchmarks</span>
@@ -69,7 +66,6 @@ function LeafEntry({ leaf, date }) {
               </div>
             </div>
           )}
-
           {leaf.limitations?.length > 0 && (
             <div className="leaf-entry-section">
               <span className="leaf-entry-section-label">Limitations</span>
@@ -78,21 +74,18 @@ function LeafEntry({ leaf, date }) {
               </ul>
             </div>
           )}
-
           {leaf.implications && (
             <div className="leaf-entry-section">
               <span className="leaf-entry-section-label">Implications</span>
               <p>{leaf.implications}</p>
             </div>
           )}
-
           {leaf.practical_application && (
             <div className="leaf-entry-section leaf-entry-section--practical">
               <span className="leaf-entry-section-label">Practical Application</span>
               <p>{leaf.practical_application}</p>
             </div>
           )}
-
           {leaf.open_questions?.length > 0 && (
             <div className="leaf-entry-section">
               <span className="leaf-entry-section-label">Open Questions</span>
@@ -107,18 +100,57 @@ function LeafEntry({ leaf, date }) {
   )
 }
 
-export default function Garden({ entries, openQuestions, onEntryUpdated }) {
+function ConnectionsChip({ connections }) {
+  const [relatedOpen, setRelatedOpen] = useState(false)
+  const [contradictOpen, setContradictOpen] = useState(false)
+  const { related = [], contradictions = [] } = connections
+
+  if (related.length === 0 && contradictions.length === 0) return null
+
+  return (
+    <div className="connections-chip-area">
+      {related.length > 0 && (
+        <div className="connections-chip-group">
+          <button className="connections-chip" onClick={() => setRelatedOpen(o => !o)}>
+            connects to {related.length}
+          </button>
+          {relatedOpen && (
+            <div className="connections-expanded">
+              {related.map(e => (
+                <div key={e.id} className="connections-related-entry">
+                  <span className="connections-related-type">{e.type}</span>
+                  <p>{e.content}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+      {contradictions.length > 0 && (
+        <div className="connections-chip-group">
+          <button className="connections-chip connections-chip--contradict" onClick={() => setContradictOpen(o => !o)}>
+            may contradict
+          </button>
+          {contradictOpen && (
+            <div className="connections-expanded">
+              {contradictions.map((c, i) => (
+                <div key={i} className="connections-related-entry">
+                  <p>{typeof c === 'string' ? c : c.content || JSON.stringify(c)}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+export default function Garden({ entries, onEntryUpdated, classifying = new Set(), entryConnections = new Map() }) {
   const [filter, setFilter] = useState(null)
   const [editingId, setEditingId] = useState(null)
   const [editContent, setEditContent] = useState('')
   const [saving, setSaving] = useState(false)
-
-  const entriesWithOpenQ = new Set((openQuestions || []).map(q => q.entry_id))
-
-  function getGroundState(entry) {
-    if (entry.type !== 'seed' && entry.type !== 'fact') return null
-    return entriesWithOpenQ.has(entry.id) ? 'semi' : 'settled'
-  }
 
   const filtered = filter ? entries.filter(e => e.category === filter) : entries
 
@@ -144,7 +176,6 @@ export default function Garden({ entries, openQuestions, onEntryUpdated }) {
       body: JSON.stringify({ id: entry.id, content: editContent.trim() })
     })
     const updated = await updateRes.json()
-
     if (updated) onEntryUpdated(updated)
     setSaving(false)
     setEditingId(null)
@@ -183,13 +214,15 @@ export default function Garden({ entries, openQuestions, onEntryUpdated }) {
             }
           }
 
-          const gs = getGroundState(e)
+          const isClassifying = classifying.has(e.id)
+          const connections = entryConnections.get(e.id)
+
           return (
-            <div key={e.id} className={`garden-entry${editingId === e.id ? ' editing' : ''}${gs ? ` garden-entry--${gs}` : ''}`}>
+            <div key={e.id} className={`garden-entry${editingId === e.id ? ' editing' : ''}`}>
               <div className="entry-meta">
                 <span className="entry-type">{e.type}</span>
-                <span className="entry-category">{e.category}</span>
-                {gs === 'settled' && <span className="entry-grounded">grounded</span>}
+                {e.category && <span className="entry-category">{e.category}</span>}
+                {isClassifying && <span className="classifying-indicator">classifying…</span>}
                 <span className="entry-date">{new Date(e.created_at).toLocaleDateString()}</span>
                 {editingId !== e.id && (
                   <button className="edit-btn" onClick={() => startEdit(e)}>edit</button>
@@ -223,6 +256,8 @@ export default function Garden({ entries, openQuestions, onEntryUpdated }) {
               <div className="entry-tags">
                 {(e.tags || []).map(t => <span key={t} className="tag">{t}</span>)}
               </div>
+
+              {connections && <ConnectionsChip connections={connections} />}
             </div>
           )
         })}

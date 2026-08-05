@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { calculateFoundationCoverage } from '../utils/zettelkasten-discovery.js'
 
 const COVERAGE_LABEL = { covered: 'covered', shallow: 'shallow', gap: 'gap' }
 
@@ -32,9 +33,12 @@ export default function Foundation({ garden, onCapture, onDiscover }) {
   const [newConcept, setNewConcept] = useState('')
   const [newDesc, setNewDesc] = useState('')
   const [saving, setSaving] = useState(false)
+  const [discoveryMetrics, setDiscoveryMetrics] = useState(null)
+  const [discoveryLoading, setDiscoveryLoading] = useState(true)
 
   useEffect(() => {
     load()
+    loadDiscoveryMetrics()
   }, [garden])
 
   async function load() {
@@ -42,6 +46,18 @@ export default function Foundation({ garden, onCapture, onDiscover }) {
     const data = await fetch(`/api/foundation?garden=${garden}`).then(r => r.json())
     setNodes(Array.isArray(data) ? data : [])
     setLoading(false)
+  }
+
+  async function loadDiscoveryMetrics() {
+    setDiscoveryLoading(true)
+    try {
+      const metrics = await calculateFoundationCoverage(garden)
+      setDiscoveryMetrics(metrics)
+    } catch (error) {
+      console.error('Failed to load discovery metrics:', error)
+      setDiscoveryMetrics(null)
+    }
+    setDiscoveryLoading(false)
   }
 
   async function generate() {
@@ -112,6 +128,26 @@ export default function Foundation({ garden, onCapture, onDiscover }) {
       </div>
 
       {nodes.length > 0 && <CoverageBar nodes={nodes} />}
+
+      {discoveryMetrics && (
+        <div className="fn-discovery-metrics">
+          <div className="fn-discovery-header">
+            <h3>zettelkasten coverage</h3>
+            <p>{discoveryMetrics.coveredFoundations} of {discoveryMetrics.totalFoundations} foundations linked ({discoveryMetrics.coveragePercent}%)</p>
+          </div>
+          <div className="fn-foundations-list">
+            {discoveryMetrics.foundations.map(fn => (
+              <div key={fn.id} className={`fn-foundation-item fn-foundation-${fn.isCovered ? 'covered' : 'empty'}`}>
+                <div className="fn-foundation-status">{fn.isCovered ? '✅' : '❌'}</div>
+                <div className="fn-foundation-info">
+                  <span className="fn-foundation-name">{fn.name}</span>
+                  <span className="fn-foundation-links">{fn.linkedCount} linked</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {adding && (
         <div className="fn-add-form">

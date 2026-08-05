@@ -54,10 +54,31 @@ export default withSpan('api.entries', async function handler(req, res) {
   }
 
   if (req.method === 'PUT') {
-    const { id, content } = req.body
-    if (!id || !content) return res.status(400).json({ error: 'Missing required fields' })
+    const { id, content, category, tags, embedding: providedEmbedding } = req.body
+    if (!id) return res.status(400).json({ error: 'Missing id' })
 
     try {
+      // Classification patch: category/tags/embedding provided directly (async classify result)
+      if (!content && (category || providedEmbedding)) {
+        const embeddingStr = providedEmbedding ? JSON.stringify(providedEmbedding) : null
+        const row = await spanFn('postgres.update', { 'db.system': 'postgresql', 'db.operation': 'UPDATE' }, async () => {
+          const [r] = await sql`
+            UPDATE entries
+            SET
+              category = COALESCE(${category ?? null}, category),
+              tags = COALESCE(${tags ?? null}, tags),
+              embedding = COALESCE(${embeddingStr}::vector, embedding)
+            WHERE id = ${id}
+            RETURNING id, type, content, category, tags, created_at
+          `
+          return r
+        })
+        await flushSentry()
+        return res.json(row)
+      }
+
+      // Content edit: re-embed from content
+      if (!content) return res.status(400).json({ error: 'Missing content' })
       const embedding = await spanFn('openai.embed', { 'llm.model': 'text-embedding-3-small' }, async () => {
         const r = await fetch('https://api.openai.com/v1/embeddings', {
           method: 'POST',
