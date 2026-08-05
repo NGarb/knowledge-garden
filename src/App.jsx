@@ -161,6 +161,14 @@ export default function App() {
 
         {view === 'capture' && (
           <div className="capture-shell">
+            <div className="garden-banner" data-garden={garden}>
+              <span className="garden-banner-label">capturing to</span>
+              <div className="garden-banner-switcher">
+                <button className={garden === 'ai' ? 'gb-btn active' : 'gb-btn'} onClick={() => setGarden('ai')}>ai + tech</button>
+                <button className={garden === 'world' ? 'gb-btn active' : 'gb-btn'} onClick={() => setGarden('world')}>world</button>
+                <button className={garden === 'culture' ? 'gb-btn active' : 'gb-btn'} onClick={() => setGarden('culture')}>culture</button>
+              </div>
+            </div>
             {openQuestions.length > 0 && (
               <div className="carrying-bar">
                 <span className="carrying-label">carrying</span>

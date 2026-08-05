@@ -321,6 +321,55 @@ button:disabled { opacity: 0.4; cursor: default; }
 .carrying-link:hover { text-decoration: underline; }
 
 
+/* GARDEN BANNER */
+.garden-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  border: 2px solid var(--gb-color, var(--border));
+  background: color-mix(in srgb, var(--gb-color, var(--accent)) 8%, var(--bg));
+}
+
+.garden-banner[data-garden="ai"]      { --gb-color: #4a6fa5; }
+.garden-banner[data-garden="world"]   { --gb-color: #4a7c59; }
+.garden-banner[data-garden="culture"] { --gb-color: #8b6914; }
+
+.garden-banner-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--gb-color, var(--text-muted));
+  white-space: nowrap;
+}
+
+.garden-banner-switcher {
+  display: flex;
+  gap: 4px;
+}
+
+.gb-btn {
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  color: var(--text-muted);
+  transition: all 0.15s;
+}
+
+.gb-btn:hover {
+  color: var(--text);
+  background: var(--surface);
+}
+
+.gb-btn.active {
+  background: var(--gb-color, var(--accent));
+  color: white;
+  font-weight: 600;
+}
+
 /* CAPTURE */
 .capture {
   display: flex;
