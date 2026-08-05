@@ -138,17 +138,10 @@ export default function Garden({ entries, openQuestions, onEntryUpdated }) {
       return
     }
     setSaving(true)
-    const embedRes = await fetch('/api/embed', {
-      method: 'POST',
+    const updateRes = await fetch('/api/entries', {
+      method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: editContent.trim() })
-    })
-    const { embedding } = await embedRes.json()
-
-    const updateRes = await fetch('/api/entry-update', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: entry.id, content: editContent.trim(), embedding })
+      body: JSON.stringify({ id: entry.id, content: editContent.trim() })
     })
     const updated = await updateRes.json()
 

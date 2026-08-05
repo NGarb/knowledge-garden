@@ -4,10 +4,11 @@
  */
 export async function exportEntryToZettelkasten(entry) {
   try {
-    const res = await fetch('/api/export-zettelkasten', {
+    const res = await fetch('/api/zettelkasten-discovery', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        action: 'export',
         id: entry.id,
         garden: entry.garden,
         type: entry.type,
@@ -29,7 +30,7 @@ export async function exportEntryToZettelkasten(entry) {
     return {
       success: true,
       filePath: data.filePath,
-      message: `✅ Exported to ${data.filePath}`
+      message: `Exported to ${data.filePath}`
     }
   } catch (error) {
     return {

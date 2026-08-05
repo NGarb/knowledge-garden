@@ -103,17 +103,6 @@ export default function Capture({ garden, openQuestions, onSaved, respondingTo, 
     setStage('saving')
 
     try {
-      let questionEmbedding = null
-      if (newQuestion.trim()) {
-        const embedRes = await fetch('/api/embed', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: newQuestion.trim() })
-        })
-        const { embedding } = await embedRes.json()
-        questionEmbedding = embedding
-      }
-
       const entryId = crypto.randomUUID()
 
       const entryRes = await fetch('/api/entries', {
@@ -149,7 +138,6 @@ export default function Capture({ garden, openQuestions, onSaved, respondingTo, 
           body: JSON.stringify({
             entry_id: entryId,
             text: newQuestion.trim(),
-            embedding: questionEmbedding,
             garden
           })
         })

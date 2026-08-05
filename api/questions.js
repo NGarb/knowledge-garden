@@ -24,10 +24,21 @@ export default withSpan('api.questions', async function handler(req, res) {
   }
 
   if (req.method === 'POST') {
-    const { entry_id, text, embedding, garden } = req.body
+    const { entry_id, text, garden } = req.body
     if (!entry_id || !text) return res.status(400).json({ error: 'Missing required fields' })
 
     try {
+      const embedding = await spanFn('openai.embed', { 'llm.model': 'text-embedding-3-small' }, async () => {
+        const r = await fetch('https://api.openai.com/v1/embeddings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.OPENAI_API_KEY}` },
+          body: JSON.stringify({ model: 'text-embedding-3-small', input: text }),
+        })
+        const data = await r.json()
+        if (!r.ok) throw Object.assign(new Error('embed failed'), { body: data })
+        return data.data[0].embedding
+      })
+
       const row = await spanFn('postgres.insert', { 'db.system': 'postgresql', 'db.operation': 'INSERT' }, async () => {
         const embeddingStr = JSON.stringify(embedding)
         const g = garden || 'ai'

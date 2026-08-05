@@ -53,5 +53,40 @@ export default withSpan('api.entries', async function handler(req, res) {
     }
   }
 
+  if (req.method === 'PUT') {
+    const { id, content } = req.body
+    if (!id || !content) return res.status(400).json({ error: 'Missing required fields' })
+
+    try {
+      const embedding = await spanFn('openai.embed', { 'llm.model': 'text-embedding-3-small' }, async () => {
+        const r = await fetch('https://api.openai.com/v1/embeddings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.OPENAI_API_KEY}` },
+          body: JSON.stringify({ model: 'text-embedding-3-small', input: content }),
+        })
+        const data = await r.json()
+        if (!r.ok) throw Object.assign(new Error('embed failed'), { body: data })
+        return data.data[0].embedding
+      })
+
+      const embeddingStr = JSON.stringify(embedding)
+      const row = await spanFn('postgres.update', { 'db.system': 'postgresql', 'db.operation': 'UPDATE' }, async () => {
+        const [r] = await sql`
+          UPDATE entries
+          SET content = ${content}, embedding = ${embeddingStr}::vector
+          WHERE id = ${id}
+          RETURNING id, type, content, category, tags, created_at
+        `
+        return r
+      })
+      await flushSentry()
+      return res.json(row)
+    } catch (e) {
+      captureException(e)
+      await flushSentry()
+      return res.status(500).json({ error: e.body ?? e.message })
+    }
+  }
+
   return res.status(405).end()
 })
