@@ -1,7 +1,105 @@
-export default function GardenPage({ params }: { params: Promise<{ garden: string }> }) {
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { listFolder, readFile } from "@/lib/github";
+import type { Garden } from "@/lib/types";
+
+const VALID_GARDENS = ["ai", "world", "culture", "misc"] as const;
+const GARDEN_LABELS: Record<Garden, string> = {
+  ai: "AI",
+  world: "World",
+  culture: "Culture",
+  misc: "Misc",
+};
+
+function firstLine(body: string): string {
   return (
-    <main className="min-h-svh bg-zinc-50 flex items-center justify-center">
-      <p className="text-zinc-400 text-sm">Coming soon.</p>
+    body
+      .split("\n")
+      .map((l) => l.replace(/^#+\s*/, "").trim())
+      .find((l) => l.length > 0) ?? ""
+  );
+}
+
+export default async function GardenPage({
+  params,
+}: {
+  params: Promise<{ garden: string }>;
+}) {
+  const { garden } = await params;
+
+  if (!VALID_GARDENS.includes(garden as Garden)) notFound();
+  const gardenId = garden as Garden;
+
+  const files = await listFolder(gardenId);
+  const notes = await Promise.all(files.map((f) => readFile(f.path)));
+
+  // Foundation notes first, then alphabetical
+  const sorted = notes.sort((a, b) => {
+    const aF = a.frontmatter.foundation ? 1 : 0;
+    const bF = b.frontmatter.foundation ? 1 : 0;
+    if (bF !== aF) return bF - aF;
+    return a.name.localeCompare(b.name);
+  });
+
+  return (
+    <main className="min-h-svh bg-zinc-50 pt-safe">
+      <div className="max-w-lg mx-auto">
+        {/* Header */}
+        <div className="flex items-center gap-3 px-4 py-4 sticky top-0 bg-zinc-50/90 backdrop-blur-sm">
+          <Link href="/" className="text-sm text-zinc-500 active:text-zinc-900">
+            ← Gardens
+          </Link>
+          <h1 className="text-lg font-semibold text-zinc-900">
+            {GARDEN_LABELS[gardenId]}
+          </h1>
+          <span className="ml-auto text-sm text-zinc-400 tabular-nums">
+            {notes.length}
+          </span>
+        </div>
+
+        {/* Note list */}
+        {sorted.length === 0 ? (
+          <p className="px-4 py-12 text-center text-sm text-zinc-400">
+            No notes yet.
+          </p>
+        ) : (
+          <ul className="flex flex-col divide-y divide-zinc-100 px-4">
+            {sorted.map((note) => {
+              const title =
+                (note.frontmatter.title as string | undefined) ?? note.name;
+              const preview = firstLine(note.body);
+              const isFoundation = !!note.frontmatter.foundation;
+              const slug = encodeURIComponent(note.name);
+
+              return (
+                <li key={note.path}>
+                  <Link
+                    href={`/garden/${gardenId}/${slug}`}
+                    className="flex flex-col gap-1 py-4 active:opacity-60"
+                  >
+                    <div className="flex items-center gap-2">
+                      {isFoundation && (
+                        <span
+                          className="w-1.5 h-1.5 rounded-full bg-zinc-900 shrink-0"
+                          title="Foundation note"
+                        />
+                      )}
+                      <span className="text-sm font-medium text-zinc-900 leading-snug">
+                        {title}
+                      </span>
+                    </div>
+                    {preview && (
+                      <p className="text-sm text-zinc-500 leading-snug line-clamp-2">
+                        {preview}
+                      </p>
+                    )}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
     </main>
   );
 }
