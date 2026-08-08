@@ -31,6 +31,17 @@ async function listVault(): Promise<VaultEntry[]> {
 
 const norm = (s: string) => s.replace(/\s+/g, " ").trim().toLowerCase();
 
+// This Next build hands route params through still URL-encoded (e.g. the
+// filename "China Economic Stall" arrives as "China%20Economic%20Stall").
+// Decode defensively — a literal '%' in a name would otherwise throw.
+function safeDecode(s: string): string {
+  try {
+    return decodeURIComponent(s);
+  } catch {
+    return s;
+  }
+}
+
 export default async function NotePage({
   params,
 }: {
@@ -41,6 +52,7 @@ export default async function NotePage({
   if (!VALID_GARDENS.includes(garden as Garden)) notFound();
   const gardenId = garden as Garden;
 
+  const noteName = safeDecode(note);
   const vault = await listVault();
 
   // Resolve against the real listing so we use GitHub's exact path — never
@@ -48,19 +60,19 @@ export default async function NotePage({
   // case, whitespace, or unicode differences and 404s a note that exists.
   const inGarden = vault.filter((e) => e.garden === gardenId);
   const target =
-    inGarden.find((e) => e.name === note) ??
-    inGarden.find((e) => e.name.toLowerCase() === note.toLowerCase()) ??
-    inGarden.find((e) => norm(e.name) === norm(note));
+    inGarden.find((e) => e.name === noteName) ??
+    inGarden.find((e) => e.name.toLowerCase() === noteName.toLowerCase()) ??
+    inGarden.find((e) => norm(e.name) === norm(noteName));
 
   if (!target) {
     // Log a few candidates so any hidden character in the real filename shows.
     const near = inGarden
-      .filter((e) => norm(e.name).includes(norm(note).slice(0, 8)))
+      .filter((e) => norm(e.name).includes(norm(noteName).slice(0, 8)))
       .map((e) => e.name)
       .slice(0, 5);
     log.warn(
       "note",
-      `no file in "${gardenId}" matches "${note}"; near: ${JSON.stringify(near)}`
+      `no file in "${gardenId}" matches "${noteName}" (raw "${note}"); near: ${JSON.stringify(near)}`
     );
     notFound();
   }
