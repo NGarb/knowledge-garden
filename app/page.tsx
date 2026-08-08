@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { listFolder } from "@/lib/github";
+import { log, errMessage } from "@/lib/log";
 import type { Garden } from "@/lib/types";
 
 const GARDENS: { id: Garden; label: string; description: string }[] = [
@@ -14,8 +15,9 @@ async function GardenCard({ id, label, description }: (typeof GARDENS)[number]) 
   try {
     const notes = await listFolder(id);
     count = notes.length;
-  } catch {
-    // show 0 on error
+  } catch (e) {
+    // Degrade to 0 on the card, but make the reason visible in the logs.
+    log.error("home", `count failed for "${id}": ${errMessage(e)}`);
   }
 
   return (
@@ -31,6 +33,9 @@ async function GardenCard({ id, label, description }: (typeof GARDENS)[number]) 
     </Link>
   );
 }
+
+// Counts are read live from the repo on every request.
+export const dynamic = "force-dynamic";
 
 export default function Home() {
   return (

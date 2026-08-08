@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
-import { listFolder, readFile } from "@/lib/github";
+import { listFolder, readFile, GitHubError } from "@/lib/github";
+import { log, errMessage } from "@/lib/log";
 import type { Garden } from "@/lib/types";
 import { NoteView } from "./NoteView";
 
@@ -7,11 +8,17 @@ const VALID_GARDENS = ["ai", "world", "culture", "misc"] as const;
 
 // Build a vault-wide map: normalized note name -> its route.
 // Wikilinks in Obsidian resolve across the whole vault, not one garden.
+// A missing/failing folder is skipped so it can't break link resolution.
 async function buildLinkMap(): Promise<Record<string, string>> {
   const perGarden = await Promise.all(
     VALID_GARDENS.map(async (g) => {
-      const files = await listFolder(g);
-      return files.map((f) => [f.name, g] as const);
+      try {
+        const files = await listFolder(g);
+        return files.map((f) => [f.name, g] as const);
+      } catch (e) {
+        log.warn("note", `link map: skipping "${g}": ${errMessage(e)}`);
+        return [] as (readonly [string, Garden])[];
+      }
     })
   );
 
@@ -39,8 +46,13 @@ export default async function NotePage({
   let noteData;
   try {
     noteData = await readFile(path);
-  } catch {
-    notFound();
+  } catch (e) {
+    // A genuine 404 → note-not-found page. Anything else (auth, network,
+    // missing env) is a real failure and should surface, not masquerade
+    // as a missing note.
+    if (e instanceof GitHubError && e.status === 404) notFound();
+    log.error("note", `load failed for "${path}": ${errMessage(e)}`);
+    throw e;
   }
 
   const linkMap = await buildLinkMap();

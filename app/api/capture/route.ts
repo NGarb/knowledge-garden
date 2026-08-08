@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { writeFile } from "@/lib/github";
+import { writeFile, GitHubError } from "@/lib/github";
+import { log, errMessage } from "@/lib/log";
 import { serializeFrontmatter, slugify } from "@/lib/markdown";
-import type { Garden, GitHubApiError } from "@/lib/types";
+import type { Garden } from "@/lib/types";
 
 const VALID_GARDENS: Garden[] = ["ai", "world", "culture", "misc"];
 
@@ -47,20 +48,23 @@ export async function POST(req: Request) {
   try {
     await writeFile(path, content, { message: `garden: capture ${slug}` });
   } catch (e) {
-    const err = e as GitHubApiError;
     // Creating a file that already exists comes back 422 (sha required).
-    if (err?.status === 422) {
+    if (e instanceof GitHubError && e.status === 422) {
+      log.warn("capture", `duplicate note rejected: ${path}`);
       return NextResponse.json(
         { error: "A note with this title already exists in that garden." },
         { status: 409 }
       );
     }
+    const message = errMessage(e);
+    log.error("capture", `write failed for "${path}": ${message}`);
     return NextResponse.json(
-      { error: err?.message ?? "Failed to save note." },
+      { error: message || "Failed to save note." },
       { status: 500 }
     );
   }
 
+  log.info("capture", `captured ${path}`);
   return NextResponse.json({
     ok: true,
     route: `/garden/${garden}/${encodeURIComponent(slug)}`,

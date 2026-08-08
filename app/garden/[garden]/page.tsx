@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { listFolder, readFile } from "@/lib/github";
-import type { Garden } from "@/lib/types";
+import { listFolder, readFile, GitHubError } from "@/lib/github";
+import { log, errMessage } from "@/lib/log";
+import type { Garden, Note } from "@/lib/types";
 
 const VALID_GARDENS = ["ai", "world", "culture", "misc"] as const;
 const GARDEN_LABELS: Record<Garden, string> = {
@@ -20,6 +21,9 @@ function firstLine(body: string): string {
   );
 }
 
+// Notes are read live from the repo on every request.
+export const dynamic = "force-dynamic";
+
 export default async function GardenPage({
   params,
 }: {
@@ -30,16 +34,29 @@ export default async function GardenPage({
   if (!VALID_GARDENS.includes(garden as Garden)) notFound();
   const gardenId = garden as Garden;
 
-  const files = await listFolder(gardenId);
-  const notes = await Promise.all(files.map((f) => readFile(f.path)));
+  let sorted: Note[] = [];
+  let loadError: string | null = null;
 
-  // Foundation notes first, then alphabetical
-  const sorted = notes.sort((a, b) => {
-    const aF = a.frontmatter.foundation ? 1 : 0;
-    const bF = b.frontmatter.foundation ? 1 : 0;
-    if (bF !== aF) return bF - aF;
-    return a.name.localeCompare(b.name);
-  });
+  try {
+    const files = await listFolder(gardenId);
+    const notes = await Promise.all(files.map((f) => readFile(f.path)));
+
+    // Foundation notes first, then alphabetical
+    sorted = notes.sort((a, b) => {
+      const aF = a.frontmatter.foundation ? 1 : 0;
+      const bF = b.frontmatter.foundation ? 1 : 0;
+      if (bF !== aF) return bF - aF;
+      return a.name.localeCompare(b.name);
+    });
+  } catch (e) {
+    if (e instanceof GitHubError && e.status === 404) {
+      // Folder doesn't exist in the repo yet — treat as an empty garden.
+      log.warn("garden", `folder "${gardenId}" not found — showing empty`);
+    } else {
+      loadError = errMessage(e);
+      log.error("garden", `load failed for "${gardenId}": ${loadError}`);
+    }
+  }
 
   return (
     <main className="min-h-svh bg-zinc-50 pt-safe">
@@ -53,12 +70,19 @@ export default async function GardenPage({
             {GARDEN_LABELS[gardenId]}
           </h1>
           <span className="ml-auto text-sm text-zinc-400 tabular-nums">
-            {notes.length}
+            {loadError ? "—" : sorted.length}
           </span>
         </div>
 
         {/* Note list */}
-        {sorted.length === 0 ? (
+        {loadError ? (
+          <div className="mx-4 mt-4 rounded-2xl bg-red-50 border border-red-100 px-4 py-4">
+            <p className="text-sm font-medium text-red-700">
+              Couldn&apos;t load this garden
+            </p>
+            <p className="mt-1 text-sm text-red-600 break-words">{loadError}</p>
+          </div>
+        ) : sorted.length === 0 ? (
           <p className="px-4 py-12 text-center text-sm text-zinc-400">
             No notes yet.
           </p>
