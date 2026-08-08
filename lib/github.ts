@@ -39,7 +39,11 @@ function headers() {
 async function ghFetch(path: string, options?: RequestInit) {
   assertConfig();
   const method = options?.method ?? "GET";
-  const url = `${BASE}/repos/${REPO}/contents/${path}`;
+  // Encode each segment so filenames containing #, ?, %, spaces, etc. survive.
+  // Interpolating raw lets new URL() treat # as a fragment and ? as a query,
+  // silently truncating the path and 404ing.
+  const encodedPath = path.split("/").map(encodeURIComponent).join("/");
+  const url = `${BASE}/repos/${REPO}/contents/${encodedPath}`;
 
   let res: Response;
   try {

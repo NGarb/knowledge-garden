@@ -40,8 +40,9 @@ export default async function NotePage({
 
   if (!VALID_GARDENS.includes(garden as Garden)) notFound();
   const gardenId = garden as Garden;
-  const name = decodeURIComponent(note);
-  const path = `${gardenId}/${name}.md`;
+  // Next already decodes route params — no second decodeURIComponent (it would
+  // double-decode and throw URIError on a filename containing a literal '%').
+  const path = `${gardenId}/${note}.md`;
 
   let noteData;
   try {
