@@ -45,6 +45,25 @@ export default function Home() {
           <h1 className="text-3xl font-semibold tracking-tight text-zinc-900">Garden</h1>
           <p className="text-sm text-zinc-500">Your Zettelkasten</p>
         </div>
+        <Link
+          href="/search"
+          className="flex items-center gap-2 rounded-full bg-white border border-zinc-200 px-4 py-2.5 text-sm text-zinc-400 active:bg-zinc-50"
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            className="shrink-0"
+          >
+            <circle cx="11" cy="11" r="7" />
+            <path d="m21 21-4.3-4.3" />
+          </svg>
+          Search all gardens
+        </Link>
         <div className="grid grid-cols-2 gap-3">
           {GARDENS.map((g) => (
             <GardenCard key={g.id} {...g} />
