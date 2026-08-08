@@ -1,4 +1,4 @@
-import matter from "gray-matter";
+import { parseNote } from "./markdown";
 import type { Garden, Note, NoteFile } from "./types";
 
 const REPO = process.env.GITHUB_REPO!;
@@ -44,7 +44,7 @@ export async function listFolder(garden: Garden): Promise<NoteFile[]> {
 export async function readFile(path: string): Promise<Note> {
   const item = await ghFetch(path);
   const raw = Buffer.from(item.content, "base64").toString("utf-8");
-  const { data: frontmatter, content: body } = matter(raw);
+  const { frontmatter, body } = parseNote(raw);
 
   return {
     name: item.name.replace(/\.md$/, ""),
