@@ -69,7 +69,13 @@ export default async function GardenPage({
           <h1 className="text-lg font-semibold text-zinc-900">
             {GARDEN_LABELS[gardenId]}
           </h1>
-          <span className="ml-auto text-sm text-zinc-400 tabular-nums">
+          <Link
+            href={`/garden/${gardenId}/gaps`}
+            className="ml-auto text-sm text-zinc-500 active:text-zinc-900"
+          >
+            Gaps
+          </Link>
+          <span className="text-sm text-zinc-400 tabular-nums">
             {loadError ? "—" : sorted.length}
           </span>
         </div>
