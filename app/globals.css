@@ -4,9 +4,37 @@
   --font-sans: var(--font-geist);
 }
 
+html {
+  /* Don't let iOS bump font sizes on rotate; kill the tap flash. */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
 body {
   background: theme(colors.zinc.50);
   color: theme(colors.zinc.900);
+  /* UI chrome isn't selectable; note bodies opt back in below. */
+  -webkit-user-select: none;
+  user-select: none;
+  /* No rubber-band revealing the page behind the app shell. */
+  overscroll-behavior-y: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Reading content and editable fields are selectable. */
+.prose,
+.prose *,
+input,
+textarea {
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 @layer utilities {
@@ -24,5 +52,11 @@ body {
   }
   .mb-safe {
     margin-bottom: env(safe-area-inset-bottom, 1rem);
+  }
+  /* Comfortable iOS touch target without disturbing layout. */
+  .tap {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
   }
 }

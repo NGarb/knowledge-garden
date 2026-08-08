@@ -114,7 +114,7 @@ export function SearchClient() {
         <div className="flex items-center gap-3 px-4 py-3 sticky top-0 bg-zinc-50/90 backdrop-blur-sm z-10">
           <button
             onClick={() => router.back()}
-            className="text-sm text-zinc-500 active:text-zinc-900 shrink-0"
+            className="tap text-sm text-zinc-500 active:text-zinc-900 shrink-0"
           >
             ← Back
           </button>
@@ -123,7 +123,7 @@ export function SearchClient() {
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Search all gardens…"
-            className="flex-1 bg-white rounded-full px-4 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 border border-zinc-200 focus:outline-none focus:border-zinc-300"
+            className="flex-1 bg-white rounded-full px-4 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 border border-zinc-200 focus:outline-none focus:border-zinc-300"
             autoCapitalize="off"
             autoCorrect="off"
           />

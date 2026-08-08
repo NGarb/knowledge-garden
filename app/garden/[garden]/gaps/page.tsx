@@ -52,7 +52,7 @@ export default async function GapsPage({
         <div className="flex items-center gap-3 px-4 py-4 sticky top-0 bg-zinc-50/90 backdrop-blur-sm z-10">
           <Link
             href={`/garden/${gardenId}`}
-            className="text-sm text-zinc-500 active:text-zinc-900"
+            className="tap text-sm text-zinc-500 active:text-zinc-900"
           >
             ← {GARDEN_LABELS[gardenId]}
           </Link>

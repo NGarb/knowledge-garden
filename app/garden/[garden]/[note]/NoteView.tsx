@@ -109,14 +109,14 @@ export function NoteView({
         <div className="flex items-center gap-4 px-4 py-4 sticky top-0 bg-zinc-50/90 backdrop-blur-sm z-10">
           <button
             onClick={() => router.back()}
-            className="text-sm text-zinc-500 active:text-zinc-900"
+            className="tap text-sm text-zinc-500 active:text-zinc-900"
             aria-label="Back"
           >
             ← Back
           </button>
           <Link
             href="/"
-            className="ml-auto text-sm text-zinc-500 active:text-zinc-900"
+            className="tap ml-auto text-sm text-zinc-500 active:text-zinc-900"
           >
             Gardens
           </Link>

@@ -61,7 +61,7 @@ export function CaptureForm({ initialTitle, initialGarden }: Props) {
         <div className="flex items-center gap-4 px-4 py-4 sticky top-0 bg-zinc-50/90 backdrop-blur-sm z-10">
           <button
             onClick={() => router.back()}
-            className="text-sm text-zinc-500 active:text-zinc-900"
+            className="tap text-sm text-zinc-500 active:text-zinc-900"
           >
             Cancel
           </button>
@@ -69,7 +69,7 @@ export function CaptureForm({ initialTitle, initialGarden }: Props) {
           <button
             onClick={submit}
             disabled={!canSubmit}
-            className="ml-auto text-sm font-medium text-zinc-900 disabled:text-zinc-300 active:opacity-60"
+            className="tap ml-auto text-sm font-medium text-zinc-900 disabled:text-zinc-300 active:opacity-60"
           >
             {status === "saving" ? "Saving…" : status === "done" ? "Saved" : "Save"}
           </button>
@@ -93,7 +93,7 @@ export function CaptureForm({ initialTitle, initialGarden }: Props) {
                 <button
                   key={g.id}
                   onClick={() => setGarden(g.id)}
-                  className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                  className={`px-4 py-2.5 rounded-full text-sm font-medium transition-colors ${
                     active
                       ? "bg-zinc-900 text-white"
                       : "bg-white text-zinc-500 border border-zinc-200 active:bg-zinc-100"

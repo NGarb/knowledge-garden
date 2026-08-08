@@ -1,4 +1,7 @@
 {
+  "id": "/",
+  "scope": "/",
+  "lang": "en",
   "name": "Garden",
   "short_name": "Garden",
   "description": "Your private Zettelkasten",

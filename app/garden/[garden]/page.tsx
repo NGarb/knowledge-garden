@@ -63,7 +63,7 @@ export default async function GardenPage({
       <div className="max-w-lg mx-auto">
         {/* Header */}
         <div className="flex items-center gap-3 px-4 py-4 sticky top-0 bg-zinc-50/90 backdrop-blur-sm">
-          <Link href="/" className="text-sm text-zinc-500 active:text-zinc-900">
+          <Link href="/" className="tap text-sm text-zinc-500 active:text-zinc-900">
             ← Gardens
           </Link>
           <h1 className="text-lg font-semibold text-zinc-900">
@@ -71,7 +71,7 @@ export default async function GardenPage({
           </h1>
           <Link
             href={`/garden/${gardenId}/gaps`}
-            className="ml-auto text-sm text-zinc-500 active:text-zinc-900"
+            className="tap ml-auto text-sm text-zinc-500 active:text-zinc-900"
           >
             Gaps
           </Link>
