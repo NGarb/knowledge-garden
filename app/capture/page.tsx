@@ -1,7 +1,7 @@
 import type { Garden } from "@/lib/types";
 import { CaptureForm } from "./CaptureForm";
 
-const VALID_GARDENS = ["ai", "world", "culture", "misc"] as const;
+const VALID_GARDENS = ["priorities", "ai", "world", "culture", "misc"] as const;
 
 export default async function CapturePage({
   searchParams,

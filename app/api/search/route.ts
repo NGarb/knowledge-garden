@@ -3,7 +3,7 @@ import { loadCorpus } from "@/lib/corpus";
 import { log, errMessage } from "@/lib/log";
 import type { Garden } from "@/lib/types";
 
-const GARDEN_ORDER: Garden[] = ["ai", "world", "culture", "misc"];
+const GARDEN_ORDER: Garden[] = ["priorities", "ai", "world", "culture", "misc"];
 
 interface Hit {
   garden: Garden;

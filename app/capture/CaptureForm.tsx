@@ -5,6 +5,7 @@ import { useState } from "react";
 import type { Garden } from "@/lib/types";
 
 const GARDENS: { id: Garden; label: string }[] = [
+  { id: "priorities", label: "Priorities" },
   { id: "ai", label: "AI" },
   { id: "world", label: "World" },
   { id: "culture", label: "Culture" },

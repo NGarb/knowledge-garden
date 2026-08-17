@@ -18,6 +18,7 @@ interface Group {
 }
 
 const GARDEN_LABELS: Record<Garden, string> = {
+  priorities: "Priorities",
   ai: "AI",
   world: "World",
   culture: "Culture",

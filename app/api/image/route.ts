@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { readBinary, GitHubError } from "@/lib/github";
 import { log, errMessage } from "@/lib/log";
 
-const VALID_GARDENS = ["ai", "world", "culture", "misc"];
+const VALID_GARDENS = ["priorities", "ai", "world", "culture", "misc"];
 const IMAGE_EXT = /\.(png|jpe?g|gif|webp|svg|avif)$/i;
 
 // Serve an image attachment out of the private repo. The path is validated to
