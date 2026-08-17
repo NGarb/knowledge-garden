@@ -108,6 +108,7 @@ export default async function NotePage({
     <NoteView
       title={title}
       garden={gardenId}
+      notePath={target.path}
       body={noteData.body}
       frontmatter={noteData.frontmatter}
       isFoundation={isFoundation}

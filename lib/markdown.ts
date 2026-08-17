@@ -48,6 +48,14 @@ function parseValue(raw: string): unknown {
   return raw;
 }
 
+// Return the raw leading frontmatter block ("---\n…\n---") verbatim, or "" if
+// the note has none. Used when rewriting a note's body while keeping its
+// frontmatter byte-for-byte intact (the parse/serialize roundtrip is lossy).
+export function extractFrontmatterBlock(raw: string): string {
+  const match = raw.match(/^(---\r?\n[\s\S]*?\r?\n---)\r?\n?/);
+  return match ? match[1] : "";
+}
+
 export function serializeFrontmatter(fm: Record<string, unknown>): string {
   const lines = Object.entries(fm).map(([k, v]) => {
     if (Array.isArray(v)) return `${k}: ${JSON.stringify(v)}`;
