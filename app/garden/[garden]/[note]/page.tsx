@@ -97,6 +97,13 @@ export default async function NotePage({
     (noteData.frontmatter.title as string | undefined) ?? noteData.name;
   const isFoundation = !!noteData.frontmatter.foundation;
 
+  // Obsidian stores attachments in "./attachments" beside the note, so for a
+  // note at "misc/Foo.md" images resolve under "misc/attachments/".
+  const noteDir = target.path.includes("/")
+    ? target.path.slice(0, target.path.lastIndexOf("/"))
+    : "";
+  const attachmentsBase = noteDir ? `${noteDir}/attachments` : "attachments";
+
   return (
     <NoteView
       title={title}
@@ -105,6 +112,7 @@ export default async function NotePage({
       frontmatter={noteData.frontmatter}
       isFoundation={isFoundation}
       linkMap={linkMap}
+      attachmentsBase={attachmentsBase}
     />
   );
 }

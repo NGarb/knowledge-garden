@@ -15,9 +15,28 @@ interface Props {
   isFoundation: boolean;
   // normalized note name -> route, for live wikilinks
   linkMap: Record<string, string>;
+  // repo folder holding this note's image attachments, e.g. "misc/attachments"
+  attachmentsBase: string;
 }
 
 const WIKILINK_SCHEME = "wikilink:";
+
+// Rewrite Obsidian image embeds ![[file.png]] / ![[file.png|alt]] into standard
+// markdown images pointing at our attachment API. Runs before the wikilink
+// rewrite so the leading "!" isn't stranded on a plain link. Only touches
+// embeds whose target has an image extension; other embeds fall through.
+function rewriteImageEmbeds(body: string, attachmentsBase: string): string {
+  return body.replace(
+    /!\[\[([^\]|]+?\.(?:png|jpe?g|gif|webp|svg|avif))(?:\|([^\]]*))?\]\]/gi,
+    (_, file: string, alt?: string) => {
+      const label = (alt ?? file).trim();
+      const src = `/api/image?path=${encodeURIComponent(
+        `${attachmentsBase}/${file.trim()}`
+      )}`;
+      return `![${label}](${src})`;
+    }
+  );
+}
 
 // Rewrite [[Target]] / [[Target|Alias]] into markdown links carrying the
 // target in a custom scheme, so ReactMarkdown parses them and hands them to
@@ -39,11 +58,15 @@ export function NoteView({
   frontmatter,
   isFoundation,
   linkMap,
+  attachmentsBase,
 }: Props) {
   const router = useRouter();
   const [fmOpen, setFmOpen] = useState(false);
 
-  const rendered = useMemo(() => rewriteWikilinks(body), [body]);
+  const rendered = useMemo(
+    () => rewriteWikilinks(rewriteImageEmbeds(body, attachmentsBase)),
+    [body, attachmentsBase]
+  );
 
   const metaFields = [
     frontmatter.type && { label: "Type", value: frontmatter.type },
