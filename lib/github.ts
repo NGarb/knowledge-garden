@@ -103,6 +103,33 @@ export async function readFile(path: string): Promise<Note> {
   };
 }
 
+// Read a binary file (image attachment) as raw bytes + content type.
+// Uses the raw media type so GitHub streams the bytes directly instead of the
+// base64-in-JSON envelope, which caps out at 1MB and needs decoding.
+export async function readBinary(
+  path: string
+): Promise<{ bytes: ArrayBuffer; contentType: string }> {
+  assertConfig();
+  const encodedPath = path.split("/").map(encodeURIComponent).join("/");
+  const url = `${BASE}/repos/${REPO}/contents/${encodedPath}`;
+
+  const res = await fetch(url, {
+    headers: { ...headers(), Accept: "application/vnd.github.raw" },
+    next: { revalidate: 0 },
+  });
+
+  if (!res.ok) {
+    const message = res.statusText;
+    log.error("github", `GET ${path} (binary) — ${res.status} ${message}`);
+    throw new GitHubError(res.status, message);
+  }
+
+  return {
+    bytes: await res.arrayBuffer(),
+    contentType: res.headers.get("content-type") ?? "application/octet-stream",
+  };
+}
+
 // Create or update a file (sha required for updates)
 export async function writeFile(
   path: string,
