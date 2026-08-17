@@ -4,7 +4,7 @@ import { log, errMessage } from "@/lib/log";
 import type { Garden } from "@/lib/types";
 import { NoteView } from "./NoteView";
 
-const VALID_GARDENS = ["ai", "world", "culture", "misc"] as const;
+const VALID_GARDENS = ["priorities", "ai", "world", "culture", "misc"] as const;
 
 interface VaultEntry {
   garden: Garden;

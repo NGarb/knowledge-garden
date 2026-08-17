@@ -1,4 +1,4 @@
-export type Garden = "ai" | "world" | "culture" | "misc";
+export type Garden = "priorities" | "ai" | "world" | "culture" | "misc";
 
 export interface NoteFrontmatter {
   id?: string;

@@ -3,7 +3,7 @@ import { readFile, writeFile, GitHubError } from "@/lib/github";
 import { log, errMessage } from "@/lib/log";
 import { extractFrontmatterBlock } from "@/lib/markdown";
 
-const VALID_GARDENS = ["ai", "world", "culture", "misc"];
+const VALID_GARDENS = ["priorities", "ai", "world", "culture", "misc"];
 
 // Update a note's body in place. The frontmatter is re-read from the repo and
 // preserved verbatim — only the body below it is replaced — so metadata can

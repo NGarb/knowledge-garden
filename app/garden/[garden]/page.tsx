@@ -4,8 +4,9 @@ import { listFolder, readFile, GitHubError } from "@/lib/github";
 import { log, errMessage } from "@/lib/log";
 import type { Garden, Note } from "@/lib/types";
 
-const VALID_GARDENS = ["ai", "world", "culture", "misc"] as const;
+const VALID_GARDENS = ["priorities", "ai", "world", "culture", "misc"] as const;
 const GARDEN_LABELS: Record<Garden, string> = {
+  priorities: "Priorities",
   ai: "AI",
   world: "World",
   culture: "Culture",

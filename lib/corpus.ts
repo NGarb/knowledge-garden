@@ -4,7 +4,7 @@ import type { Garden, Note } from "./types";
 
 export type SearchDoc = Note & { garden: Garden };
 
-const GARDENS: Garden[] = ["ai", "world", "culture", "misc"];
+const GARDENS: Garden[] = ["priorities", "ai", "world", "culture", "misc"];
 
 // Loading every note across all gardens is a lot of GitHub calls, so cache
 // the corpus briefly in-module. A warm serverless instance reuses it across

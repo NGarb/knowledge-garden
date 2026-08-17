@@ -4,7 +4,7 @@ import { log, errMessage } from "@/lib/log";
 import { serializeFrontmatter, slugify } from "@/lib/markdown";
 import type { Garden } from "@/lib/types";
 
-const VALID_GARDENS: Garden[] = ["ai", "world", "culture", "misc"];
+const VALID_GARDENS: Garden[] = ["priorities", "ai", "world", "culture", "misc"];
 
 export async function POST(req: Request) {
   let payload: { title?: unknown; body?: unknown; garden?: unknown };

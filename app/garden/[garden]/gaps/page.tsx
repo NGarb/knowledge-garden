@@ -4,8 +4,9 @@ import { loadCorpus } from "@/lib/corpus";
 import { extractWikilinks } from "@/lib/markdown";
 import type { Garden } from "@/lib/types";
 
-const VALID_GARDENS = ["ai", "world", "culture", "misc"] as const;
+const VALID_GARDENS = ["priorities", "ai", "world", "culture", "misc"] as const;
 const GARDEN_LABELS: Record<Garden, string> = {
+  priorities: "Priorities",
   ai: "AI",
   world: "World",
   culture: "Culture",

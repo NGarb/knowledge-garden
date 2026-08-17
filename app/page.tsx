@@ -4,6 +4,7 @@ import { log, errMessage } from "@/lib/log";
 import type { Garden } from "@/lib/types";
 
 const GARDENS: { id: Garden; label: string; description: string }[] = [
+  { id: "priorities", label: "Priorities", description: "Today & this week — work & personal" },
   { id: "world", label: "World", description: "Geopolitics, economics, history" },
   { id: "ai", label: "AI", description: "Models, papers, tools" },
   { id: "culture", label: "Culture", description: "Language, place, people" },
