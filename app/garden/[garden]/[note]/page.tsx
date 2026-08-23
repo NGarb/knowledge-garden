@@ -3,6 +3,7 @@ import { listFolder, readFile, GitHubError } from "@/lib/github";
 import { log, errMessage } from "@/lib/log";
 import type { Garden } from "@/lib/types";
 import { NoteView } from "./NoteView";
+import { PriorityView } from "./PriorityView";
 
 const VALID_GARDENS = ["priorities", "ai", "world", "culture", "misc"] as const;
 
@@ -104,8 +105,12 @@ export default async function NotePage({
     : "";
   const attachmentsBase = noteDir ? `${noteDir}/attachments` : "attachments";
 
+  // Priorities notes are checklists — give them the interactive task view;
+  // every other garden keeps the read/edit prose view.
+  const View = gardenId === "priorities" ? PriorityView : NoteView;
+
   return (
-    <NoteView
+    <View
       title={title}
       garden={gardenId}
       notePath={target.path}
