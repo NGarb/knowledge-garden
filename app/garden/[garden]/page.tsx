@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { listFolder, readFile, GitHubError } from "@/lib/github";
 import { log, errMessage } from "@/lib/log";
 import type { Garden, Note } from "@/lib/types";
+import { CalendarStrip } from "./CalendarStrip";
 
 const VALID_GARDENS = ["priorities", "ai", "world", "culture", "misc"] as const;
 const GARDEN_LABELS: Record<Garden, string> = {
@@ -80,6 +81,10 @@ export default async function GardenPage({
             {loadError ? "—" : sorted.length}
           </span>
         </div>
+
+        {/* Calendar strip — priorities garden only, invisible until an ICS
+            feed is configured (PRIORITIES_ICS_URL). */}
+        {gardenId === "priorities" && <CalendarStrip />}
 
         {/* Note list */}
         {loadError ? (
