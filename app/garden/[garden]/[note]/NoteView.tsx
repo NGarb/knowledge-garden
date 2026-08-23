@@ -1,6 +1,6 @@
 "use client";
 
-import ReactMarkdown from "react-markdown";
+import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -23,6 +23,15 @@ interface Props {
 }
 
 const WIKILINK_SCHEME = "wikilink:";
+
+// react-markdown sanitizes hrefs through defaultUrlTransform, which drops any
+// unknown protocol (returning "") — that would strip our wikilink: scheme
+// before the anchor renderer ever sees it. Let wikilinks pass through; keep the
+// default sanitization for every other URL.
+function urlTransform(url: string): string {
+  if (url.startsWith(WIKILINK_SCHEME)) return url;
+  return defaultUrlTransform(url);
+}
 
 // Rewrite Obsidian image embeds ![[file.png]] / ![[file.png|alt]] into standard
 // markdown images pointing at our attachment API. Runs before the wikilink
@@ -283,6 +292,7 @@ export function NoteView({
               prose-blockquote:border-zinc-300 prose-blockquote:text-zinc-500">
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
+                urlTransform={urlTransform}
                 components={{ a: Anchor }}
               >
                 {rendered}
