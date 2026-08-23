@@ -2,6 +2,7 @@ import Link from "next/link";
 import { listFolder } from "@/lib/github";
 import { log, errMessage } from "@/lib/log";
 import type { Garden } from "@/lib/types";
+import { ReviewLink } from "./ReviewLink";
 
 const GARDENS: { id: Garden; label: string; description: string }[] = [
   { id: "priorities", label: "Priorities", description: "Today & this week — work & personal" },
@@ -65,6 +66,7 @@ export default function Home() {
           </svg>
           Search all gardens
         </Link>
+        <ReviewLink />
         <div className="grid grid-cols-2 gap-3">
           {GARDENS.map((g) => (
             <GardenCard key={g.id} {...g} />
