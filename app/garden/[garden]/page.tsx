@@ -4,6 +4,7 @@ import { listFolder, readFile, GitHubError } from "@/lib/github";
 import { log, errMessage } from "@/lib/log";
 import type { Garden, Note } from "@/lib/types";
 import { CalendarStrip } from "./CalendarStrip";
+import { RandomCardButton } from "./RandomCardButton";
 
 const VALID_GARDENS = ["priorities", "ai", "world", "culture", "misc"] as const;
 const GARDEN_LABELS: Record<Garden, string> = {
@@ -136,6 +137,9 @@ export default async function GardenPage({
           </ul>
         )}
       </div>
+
+      {/* Draw a random card from this garden — sits above the capture FAB. */}
+      <RandomCardButton garden={gardenId} />
     </main>
   );
 }
