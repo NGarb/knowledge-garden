@@ -120,6 +120,16 @@ export function NoteView({
     }
   }
 
+  // A linked reference repo, if the note declares one. Accept a full URL or the
+  // "owner/repo" shorthand; show the shorthand as the label either way.
+  const repo = typeof frontmatter.repo === "string" ? frontmatter.repo.trim() : "";
+  const repoHref = repo
+    ? /^https?:\/\//.test(repo)
+      ? repo
+      : `https://github.com/${repo}`
+    : "";
+  const repoLabel = repo.replace(/^https?:\/\/(www\.)?github\.com\//, "");
+
   const metaFields = [
     frontmatter.type && { label: "Type", value: frontmatter.type },
     frontmatter.category && { label: "Category", value: frontmatter.category },
@@ -235,6 +245,19 @@ export function NoteView({
             )}
             {title}
           </h1>
+
+          {/* Linked reference repo */}
+          {repoHref && (
+            <a
+              href={repoHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="tap -mt-3 inline-flex w-fit items-center gap-1.5 rounded-full bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white active:opacity-80"
+            >
+              <span className="font-mono">{"</>"}</span>
+              {repoLabel}
+            </a>
+          )}
 
           {/* Frontmatter toggle */}
           {metaFields.length > 0 && (

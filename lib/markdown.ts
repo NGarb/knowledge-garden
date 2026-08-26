@@ -75,6 +75,19 @@ export function slugify(title: string): string {
     .replace(/^-|-$/g, "");
 }
 
+// Turn a title into a vault filename base (no extension), the way Obsidian
+// does: keep the human-readable title verbatim, only stripping characters a
+// filesystem or an Obsidian wikilink can't hold (\ / : * ? " < > | # ^ [ ]).
+// Because [[wikilinks]] reference a note's display title, naming the file after
+// the title — not a slug — is what lets a captured note resolve the link (and
+// clear the matching gap) instead of leaving a slug that never matches.
+export function noteBasename(title: string): string {
+  return title
+    .replace(/[\\/:*?"<>|#^\[\]]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 export function extractWikilinks(body: string): string[] {
   const matches = body.matchAll(/\[\[([^\]|]+)(?:\|[^\]]*)?\]\]/g);
   return [...matches].map((m) => m[1].trim());

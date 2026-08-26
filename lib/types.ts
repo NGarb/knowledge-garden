@@ -12,6 +12,9 @@ export interface NoteFrontmatter {
   arc_stage?: string;
   arc_variant?: string;
   title?: string;
+  // A related repo — a full URL or "owner/repo" shorthand — so a concept note
+  // can point at the reference implementation that taught it.
+  repo?: string;
   [key: string]: unknown;
 }
 
