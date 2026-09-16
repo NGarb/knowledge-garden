@@ -73,8 +73,14 @@ export default async function GardenPage({
             {GARDEN_LABELS[gardenId]}
           </h1>
           <Link
-            href={`/garden/${gardenId}/mastery`}
+            href={`/garden/${gardenId}/recall`}
             className="tap ml-auto text-sm text-zinc-500 active:text-zinc-900"
+          >
+            Recall
+          </Link>
+          <Link
+            href={`/garden/${gardenId}/mastery`}
+            className="tap text-sm text-zinc-500 active:text-zinc-900"
           >
             Mastery
           </Link>
