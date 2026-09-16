@@ -47,23 +47,26 @@ interface RecallAttempt {
 
 ## Pieces
 
-- [ ] `lib/recall.ts` — **pure, dependency-free** (like `flashcards.ts`). Given `RecallNote[]`
+- [x] `lib/recall.ts` — **pure, dependency-free** (like `flashcards.ts`). Given `RecallNote[]`
       (`{ name, title, type, tags, foundation, category, wikilinks }`), builds the eligible topic pool:
-  - [ ] MOC clusters: resolve a MOC note's wikilinks to member notes (case-insensitive), keep `concept|fact` members
-  - [ ] Framework-tag clusters: group notes by each `#framework/*` tag; derive a label from the tag
-  - [ ] Dedupe MOC vs framework clusters by label / member overlap; prefer the MOC label
-  - [ ] Eligibility gate: `members.length >= MIN_CLUSTER` (hidden)
-  - [ ] Thesis pool: `type: concept && foundation`, excluding cluster labels
-  - [ ] `drawTopic(pool, { exclude, thesisChance })` — random pick with anti-repeat + occasional thesis
-- [ ] `lib/recall.test.ts` — `node:test`, run with `node --test lib/recall.test.ts` (Node 24, zero deps)
-- [ ] `GET /api/recall/topic?garden=&exclude=` → `{ kind, label, members: [{name,title}] }`
-- [ ] `GET /api/recall/log?garden=` → attempt history
-- [ ] `POST /api/recall/attempt` → append to `recall/<garden>.json`
-- [ ] Card write: append `front :: back` to a missed note's body, reusing `/api/note` write logic
-- [ ] `app/garden/[garden]/recall/page.tsx` + `RecallSession.tsx` (full-screen: draw → dump → reveal/grade → save)
-- [ ] "Recall" link in the garden header, beside Mastery / Gaps
-- [ ] Reveal checklist: tap a note title to cycle covered / shaky / missed; "what I couldn't explain" box; optional 1–5 feel
-- [ ] "Add N gaps to deck": per-gap confirm (prefilled front :: back, editable) → append to note
+  - [x] MOC clusters: resolve a MOC note's wikilinks to member notes (case-insensitive), keep `concept|fact` members
+  - [x] Framework-tag clusters: group notes by each `#framework/*` tag; derive a label from the tag
+  - [x] Dedupe MOC vs framework clusters by member overlap; prefer the MOC label (label-similarity left off by choice — "Development arc" and "Economic Development Arc" kept distinct)
+  - [x] Eligibility gate: `members.length >= MIN_CLUSTER` (hidden)
+  - [x] Thesis pool: `type: concept && foundation`, excluding cluster labels + the garden root MOC + reference-style titles
+  - [x] `drawTopic(pool, { exclude, thesisChance })` — random pick with anti-repeat + occasional thesis
+- [x] `lib/recall.test.ts` — `node:test`, run with `node --test lib/recall.test.ts` (Node 24, zero deps) — 16 tests
+- [x] `GET /api/recall/topic?garden=&exclude=` → `{ kind, label, members: [{name,title}] }`
+- [x] `GET /api/recall/log?garden=&topic=` → attempt history
+- [x] `POST /api/recall/attempt` → append to `recall/<garden>.json`
+- [x] Card write (`/api/recall/card`): GET a prefilled draft (title :: first line), POST appends `front :: back` to the note
+- [x] `app/garden/[garden]/recall/page.tsx` + `RecallSession.tsx` (full-screen: draw → dump → reveal/grade → save)
+- [x] "Recall" link in the garden header, beside Mastery / Gaps
+- [x] Reveal checklist: tap a note title to cycle covered / shaky / missed; "what I couldn't explain" box; optional 1–5 feel
+- [x] "Turn gaps into cards": per-gap confirm (prefilled front :: back, editable) → append to note
+- [x] History: past-attempt summary shown under a freshly drawn topic
+
+_Not yet run: a live end-to-end smoke test (the app is password-gated)._
 
 ## Deferred (not this issue)
 

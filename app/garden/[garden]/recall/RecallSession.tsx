@@ -23,6 +23,14 @@ interface Topic {
   members: TopicMember[];
   source: string;
 }
+interface Attempt {
+  id: string;
+  at: string;
+  covered: string[];
+  shaky: string[];
+  missed: string[];
+  feel?: number;
+}
 
 type Phase = "draw" | "dump" | "grade" | "done";
 // Per-member self-grade. Unset until tapped; cycles covered → shaky → missed.
@@ -41,6 +49,7 @@ const RECENT_MAX = 4;
 export function RecallSession({ garden }: { garden: Garden }) {
   const [phase, setPhase] = useState<Phase>("draw");
   const [topic, setTopic] = useState<Topic | null>(null);
+  const [history, setHistory] = useState<Attempt[]>([]);
   const [emptyPool, setEmptyPool] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -50,6 +59,7 @@ export function RecallSession({ garden }: { garden: Garden }) {
   const [freeGaps, setFreeGaps] = useState("");
   const [feel, setFeel] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
+  const [savedGaps, setSavedGaps] = useState<TopicMember[]>([]);
 
   const recent = useRef<string[]>([]);
   const dumpRef = useRef<HTMLTextAreaElement>(null);
@@ -57,6 +67,7 @@ export function RecallSession({ garden }: { garden: Garden }) {
   const draw = useCallback(async () => {
     setLoading(true);
     setError(null);
+    setHistory([]);
     try {
       const r = await fetch(
         `/api/recall/topic?garden=${garden}&exclude=${recent.current.join(",")}`
@@ -71,6 +82,11 @@ export function RecallSession({ garden }: { garden: Garden }) {
         setEmptyPool(false);
         setTopic(d.topic as Topic);
         recent.current = [d.topic.key, ...recent.current].slice(0, RECENT_MAX);
+        // Load this topic's past attempts (best-effort; failure just hides them).
+        fetch(`/api/recall/log?garden=${garden}&topic=${encodeURIComponent(d.topic.key)}`)
+          .then((res) => res.json())
+          .then((j) => setHistory(Array.isArray(j.attempts) ? j.attempts : []))
+          .catch(() => {});
       }
     } catch {
       setError("Couldn't draw a topic.");
@@ -88,6 +104,7 @@ export function RecallSession({ garden }: { garden: Garden }) {
     setMarks({});
     setFreeGaps("");
     setFeel(null);
+    setSavedGaps([]);
     setPhase("dump");
   };
 
@@ -129,8 +146,14 @@ export function RecallSession({ garden }: { garden: Garden }) {
         }),
       });
       const d = await r.json();
-      if (d.error) setError(d.error);
-      else setPhase("done");
+      if (d.error) {
+        setError(d.error);
+      } else {
+        // Gaps worth carding = everything shaky or missed, in note order.
+        const gapNames = new Set([...shaky, ...missed]);
+        setSavedGaps(topic.members.filter((m) => gapNames.has(m.name)));
+        setPhase("done");
+      }
     } catch {
       setError("Couldn't save your attempt.");
     } finally {
@@ -167,9 +190,7 @@ export function RecallSession({ garden }: { garden: Garden }) {
               <p className="text-sm text-zinc-400">Drawing a topic…</p>
             ) : emptyPool ? (
               <div className="flex flex-col gap-2">
-                <p className="text-sm text-zinc-500">
-                  Nothing to recall here yet.
-                </p>
+                <p className="text-sm text-zinc-500">Nothing to recall here yet.</p>
                 <p className="text-xs text-zinc-400">
                   Recall draws from your MOCs and{" "}
                   <code className="text-zinc-500">#framework/*</code> tags.
@@ -184,6 +205,7 @@ export function RecallSession({ garden }: { garden: Garden }) {
                   <span className="text-2xl font-semibold leading-snug text-zinc-900">
                     {topic.label}
                   </span>
+                  <HistorySummary history={history} />
                 </div>
                 <div className="flex w-full max-w-xs flex-col gap-3">
                   <button
@@ -213,9 +235,7 @@ export function RecallSession({ garden }: { garden: Garden }) {
               <span className="text-xs font-medium uppercase tracking-wide text-zinc-400">
                 {verb}
               </span>
-              <span className="text-sm font-semibold text-zinc-900">
-                {topic.label}
-              </span>
+              <span className="text-sm font-semibold text-zinc-900">{topic.label}</span>
             </div>
             <textarea
               ref={dumpRef}
@@ -324,14 +344,26 @@ export function RecallSession({ garden }: { garden: Garden }) {
 
         {/* DONE */}
         {phase === "done" && topic && (
-          <div className="flex flex-1 flex-col items-center justify-center gap-6 px-6 pb-24 text-center">
-            <div className="flex flex-col gap-1">
+          <div className="flex flex-1 flex-col gap-6 px-4 pb-24 pt-4">
+            <div className="flex flex-col items-center gap-1 text-center">
               <span className="text-sm font-semibold text-zinc-900">Attempt saved</span>
-              <span className="text-xs text-zinc-400">
-                {topic.label}
-              </span>
+              <span className="text-xs text-zinc-400">{topic.label}</span>
             </div>
-            <div className="flex w-full max-w-xs flex-col gap-3">
+
+            {savedGaps.length > 0 && (
+              <div className="flex flex-col gap-2">
+                <p className="text-xs font-medium text-zinc-500">
+                  Turn gaps into cards
+                </p>
+                <ul className="flex flex-col gap-2">
+                  {savedGaps.map((gap) => (
+                    <GapCard key={gap.name} garden={garden} gap={gap} />
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <div className="flex flex-col gap-3">
               <button
                 type="button"
                 onClick={() => {
@@ -344,7 +376,7 @@ export function RecallSession({ garden }: { garden: Garden }) {
               </button>
               <Link
                 href={`/garden/${garden}`}
-                className="tap text-sm text-zinc-500 active:text-zinc-900"
+                className="tap text-center text-sm text-zinc-500 active:text-zinc-900"
               >
                 Back to {GARDEN_LABELS[garden]}
               </Link>
@@ -353,6 +385,131 @@ export function RecallSession({ garden }: { garden: Garden }) {
         )}
       </div>
     </main>
+  );
+}
+
+// Compact "you've done this before" line under a freshly drawn topic.
+function HistorySummary({ history }: { history: Attempt[] }) {
+  if (history.length === 0) return null;
+  const last = history[0]; // log route returns newest first
+  const marked = last.covered.length + last.shaky.length + last.missed.length;
+  const when = new Date(last.at).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  });
+  return (
+    <span className="text-xs text-zinc-400">
+      Recalled {history.length}×
+      {marked > 0 && ` · last ${last.covered.length}/${marked} covered`} · {when}
+    </span>
+  );
+}
+
+// One gap → an editable, prefilled card that appends to the source note.
+function GapCard({ garden, gap }: { garden: Garden; gap: TopicMember }) {
+  const [open, setOpen] = useState(false);
+  const [front, setFront] = useState(gap.title);
+  const [back, setBack] = useState("");
+  const [loaded, setLoaded] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [added, setAdded] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const expand = async () => {
+    setOpen(true);
+    if (loaded) return;
+    try {
+      const r = await fetch(
+        `/api/recall/card?garden=${garden}&note=${encodeURIComponent(gap.name)}`
+      );
+      const d = await r.json();
+      if (!d.error) {
+        setFront(d.front || gap.title);
+        setBack(d.back || "");
+      }
+    } catch {
+      /* keep the title-only default */
+    } finally {
+      setLoaded(true);
+    }
+  };
+
+  const add = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const r = await fetch("/api/recall/card", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ garden, note: gap.name, front, back }),
+      });
+      const d = await r.json();
+      if (d.error) setError(d.error);
+      else setAdded(true);
+    } catch {
+      setError("Couldn't add the card.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (added) {
+    return (
+      <li className="flex items-center gap-2 rounded-2xl border border-emerald-100 bg-emerald-50 p-3">
+        <span className="text-xs font-medium text-emerald-700">✓ added</span>
+        <span className="min-w-0 flex-1 truncate text-sm text-zinc-700">{gap.title}</span>
+      </li>
+    );
+  }
+
+  return (
+    <li className="rounded-2xl border border-zinc-100 bg-white p-3">
+      {!open ? (
+        <div className="flex items-center gap-2">
+          <span className="min-w-0 flex-1 truncate text-sm text-zinc-800">{gap.title}</span>
+          <button
+            type="button"
+            onClick={() => void expand()}
+            className="tap shrink-0 rounded-full bg-zinc-900 px-3 py-1 text-xs font-medium text-white active:opacity-80"
+          >
+            ＋ card
+          </button>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2">
+          <input
+            value={front}
+            onChange={(e) => setFront(e.target.value)}
+            placeholder="Front (prompt)"
+            className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-zinc-400"
+          />
+          <textarea
+            value={back}
+            onChange={(e) => setBack(e.target.value)}
+            placeholder={loaded ? "Back (answer)" : "Loading…"}
+            className="min-h-[3.5rem] w-full resize-none rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-zinc-400"
+          />
+          {error && <p className="text-xs text-red-600">{error}</p>}
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => void add()}
+              disabled={busy || !front.trim() || !back.trim()}
+              className="tap flex-1 rounded-xl bg-zinc-900 py-2 text-xs font-medium text-white active:opacity-80 disabled:opacity-40"
+            >
+              {busy ? "Adding…" : "Add to deck"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="tap rounded-xl px-3 py-2 text-xs text-zinc-500 active:text-zinc-900"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+    </li>
   );
 }
 
